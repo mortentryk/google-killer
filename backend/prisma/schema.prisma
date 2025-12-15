@@ -1,0 +1,116 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Category {
+  PLUMBING
+  ELECTRICAL
+  GARDEN
+  CARPENTRY
+  CONSTRUCTION
+  GENERAL
+  TOOLS_SAFETY
+}
+
+enum RelationType {
+  PARENT
+  CHILD
+  RELATED
+  ALTERNATIVE_SOLUTION
+  PREREQUISITE
+}
+
+model Node {
+  id             String   @id @default(uuid())
+  title          String
+  category       Category @default(GENERAL)
+  aiSummary      String
+  steps          Json     // Array of strings
+  difficulty     Int      @default(1) // 1-5
+  timeEstimate   String
+  costEstimate   String
+  tools          Json     // Array of strings
+  materials      Json     // Array of strings
+  commonMistakes Json     // Array of strings
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  outgoingEdges Edge[]    @relation("FromNode")
+  incomingEdges Edge[]    @relation("ToNode")
+  comments      Comment[]
+  videos        Video[]
+  journeySteps  JourneyStep[]
+
+  @@index([title])
+  @@index([category])
+}
+
+model Edge {
+  id           String       @id @default(uuid())
+  fromNodeId   String
+  toNodeId     String
+  relationType RelationType @default(RELATED)
+
+  fromNode Node @relation("FromNode", fields: [fromNodeId], references: [id], onDelete: Cascade)
+  toNode   Node @relation("ToNode", fields: [toNodeId], references: [id], onDelete: Cascade)
+
+  @@unique([fromNodeId, toNodeId, relationType])
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  nodeId    String
+  userId    String?
+  text      String
+  createdAt DateTime @default(now())
+
+  node Node  @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+  user User? @relation(fields: [userId], references: [id])
+}
+
+model Video {
+  id      String @id @default(uuid())
+  nodeId  String
+  url     String
+  title   String
+  summary String
+
+  node Node @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id          String   @id @default(uuid())
+  email       String   @unique
+  displayName String
+  createdAt   DateTime @default(now())
+
+  comments Comment[]
+  journeys Journey[]
+}
+
+model Journey {
+  id        String    @id @default(uuid())
+  userId    String?
+  startedAt DateTime  @default(now())
+  endedAt   DateTime?
+
+  user  User?         @relation(fields: [userId], references: [id])
+  steps JourneyStep[]
+}
+
+model JourneyStep {
+  id        String   @id @default(uuid())
+  journeyId String
+  nodeId    String
+  order     Int
+  timestamp DateTime @default(now())
+
+  journey Journey @relation(fields: [journeyId], references: [id], onDelete: Cascade)
+  node    Node    @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+}
