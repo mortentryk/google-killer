@@ -2,6 +2,10 @@
     "include": [
         "./src/**/*"
     ],
+    "exclude": [
+        "./src/MindMapApp.tsx",
+        "./src/LandingPage.tsx"
+    ],
     "compilerOptions": {
         "strict": true,
         "esModuleInterop": true,
