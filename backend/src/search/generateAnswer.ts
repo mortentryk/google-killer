@@ -199,25 +199,31 @@ export async function createTopicFromGeneration(rawQuery: string): Promise<strin
 
     await linkRelatedNodes(primary.id, generated.relatedTitles);
 
-    const home = await prisma.node.findFirst({
-        where: { title: { equals: 'Home', mode: 'insensitive' } },
-    });
-    if (home && home.id !== primary.id) {
-        await prisma.edge.upsert({
-            where: {
-                fromNodeId_toNodeId_relationType: {
+    // Link to Home only when the model did not place this under a more specific parent.
+    const linkedParent = generated.relatedTitles.some(
+        (t) => t.toLowerCase() !== 'home' && t.length > 0
+    );
+    if (!linkedParent) {
+        const home = await prisma.node.findFirst({
+            where: { title: { equals: 'Home', mode: 'insensitive' } },
+        });
+        if (home && home.id !== primary.id) {
+            await prisma.edge.upsert({
+                where: {
+                    fromNodeId_toNodeId_relationType: {
+                        fromNodeId: home.id,
+                        toNodeId: primary.id,
+                        relationType: RelationType.CHILD,
+                    },
+                },
+                create: {
                     fromNodeId: home.id,
                     toNodeId: primary.id,
                     relationType: RelationType.CHILD,
                 },
-            },
-            create: {
-                fromNodeId: home.id,
-                toNodeId: primary.id,
-                relationType: RelationType.CHILD,
-            },
-            update: {},
-        });
+                update: {},
+            });
+        }
     }
 
     return primary.id;

@@ -4,7 +4,7 @@ import { ResultsHeader } from '../components/ResultsHeader';
 import { GraphView } from '../components/GraphView';
 import { NodeDetailsPanel } from '../components/NodeDetailsPanel';
 import { AnswerDiscussionPanel } from '../components/AnswerDiscussionPanel';
-import { getTopicBySlug, searchNodes } from '../api/client';
+import { getNode, getTopicBySlug, searchNodes } from '../api/client';
 import { GraphData, Node, ResultView } from '../types';
 import { useSearchHistory } from '../hooks/useSearchHistory';
 
@@ -41,9 +41,21 @@ export default function TopicPage() {
         if (slug) loadTopic(slug);
     }, [slug, loadTopic]);
 
-    const primaryNode = useMemo(() => {
-        if (!graphData?.primaryNodeId) return null;
-        return graphData.nodes.find((n) => n.id === graphData.primaryNodeId) || null;
+    const [primaryNode, setPrimaryNode] = useState<Node | null>(null);
+
+    useEffect(() => {
+        if (!graphData?.primaryNodeId) {
+            setPrimaryNode(null);
+            return;
+        }
+        const fromGraph = graphData.nodes.find((n) => n.id === graphData.primaryNodeId);
+        if (fromGraph) {
+            setPrimaryNode(fromGraph);
+            return;
+        }
+        getNode(graphData.primaryNodeId)
+            .then(setPrimaryNode)
+            .catch(() => setPrimaryNode(null));
     }, [graphData]);
 
     const runSearch = async (rawQuery: string) => {

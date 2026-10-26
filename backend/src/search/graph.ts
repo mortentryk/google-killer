@@ -1,4 +1,4 @@
-import { Edge, Node } from '@prisma/client';
+import { Edge, Node, RelationType } from '@prisma/client';
 import prisma from '../db/client';
 
 export type GraphPayload = {
@@ -13,30 +13,39 @@ export type GraphPayload = {
     normalizedQuery: string;
 };
 
+/** Mind map for one topic: primary node, its CHILD-chain ancestors, and CHILD-chain descendants only (no sibling branches). */
 export async function connectedSubgraph(primaryNodeId: string): Promise<{
     nodes: Node[];
     edges: Edge[];
     path: string[];
 }> {
     const allEdges = await prisma.edge.findMany();
+    const childEdges = allEdges.filter((e) => e.relationType === RelationType.CHILD);
+
     const nodeIds = new Set<string>([primaryNodeId]);
 
-    let changed = true;
-    while (changed) {
-        changed = false;
-        for (const edge of allEdges) {
-            if (nodeIds.has(edge.fromNodeId) && !nodeIds.has(edge.toNodeId)) {
-                nodeIds.add(edge.toNodeId);
-                changed = true;
-            }
-            if (nodeIds.has(edge.toNodeId) && !nodeIds.has(edge.fromNodeId)) {
+    const addAncestors = (nodeId: string) => {
+        for (const edge of childEdges) {
+            if (edge.toNodeId === nodeId && !nodeIds.has(edge.fromNodeId)) {
                 nodeIds.add(edge.fromNodeId);
-                changed = true;
+                addAncestors(edge.fromNodeId);
             }
         }
-    }
+    };
 
-    const edges = allEdges.filter(
+    const addDescendants = (nodeId: string) => {
+        for (const edge of childEdges) {
+            if (edge.fromNodeId === nodeId && !nodeIds.has(edge.toNodeId)) {
+                nodeIds.add(edge.toNodeId);
+                addDescendants(edge.toNodeId);
+            }
+        }
+    };
+
+    addAncestors(primaryNodeId);
+    addDescendants(primaryNodeId);
+
+    const edges = childEdges.filter(
         (e) => nodeIds.has(e.fromNodeId) && nodeIds.has(e.toNodeId)
     );
     const nodes = await prisma.node.findMany({

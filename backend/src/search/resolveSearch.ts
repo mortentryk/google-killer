@@ -36,6 +36,11 @@ async function pickPrimaryNodeId(normalized: string): Promise<string | null> {
     const tokens = queryTokens(normalized);
     if (!normalized) return null;
 
+    const exactTitle = await prisma.node.findFirst({
+        where: { title: { equals: normalized, mode: 'insensitive' } },
+    });
+    if (exactTitle) return exactTitle.id;
+
     const candidates = await prisma.node.findMany();
     let bestId: string | null = null;
     let bestScore = 0;
