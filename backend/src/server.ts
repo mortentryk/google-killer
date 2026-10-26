@@ -2,6 +2,11 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import prisma from './db/client';
+import {
+    LATEST_SEARCH_SCAN,
+    normalizeSearchQuery,
+    toLatestSearches,
+} from './searches';
 
 dotenv.config();
 
@@ -15,6 +20,21 @@ app.get('/', (req, res) => {
     res.send('Antigravity API is running');
 });
 
+app.get('/searches', async (_req, res) => {
+    try {
+        const recent = await prisma.search.findMany({
+            orderBy: { createdAt: 'desc' },
+            take: LATEST_SEARCH_SCAN,
+            select: { query: true, createdAt: true },
+        });
+
+        res.json({ searches: toLatestSearches(recent) });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 app.get('/search', async (req, res) => {
     const { q } = req.query;
     if (!q || typeof q !== 'string') {
@@ -22,12 +42,24 @@ app.get('/search', async (req, res) => {
         return;
     }
 
+    const query = normalizeSearchQuery(q);
+    if (!query) {
+        res.status(400).json({ error: 'Query parameter q is required' });
+        return;
+    }
+
+    try {
+        await prisma.search.create({ data: { query } });
+    } catch (error) {
+        console.error('Failed to record search', error);
+    }
+
     try {
         const nodes = await prisma.node.findMany({
             where: {
                 OR: [
-                    { title: { contains: q, mode: 'insensitive' } },
-                    { aiSummary: { contains: q, mode: 'insensitive' } }
+                    { title: { contains: query, mode: 'insensitive' } },
+                    { aiSummary: { contains: query, mode: 'insensitive' } }
                 ]
             },
             take: 5

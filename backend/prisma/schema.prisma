@@ -114,3 +114,11 @@ model JourneyStep {
   journey Journey @relation(fields: [journeyId], references: [id], onDelete: Cascade)
   node    Node    @relation(fields: [nodeId], references: [id], onDelete: Cascade)
 }
+
+model Search {
+  id        String   @id @default(uuid())
+  query     String
+  createdAt DateTime @default(now())
+
+  @@index([createdAt(sort: Desc)])
+}

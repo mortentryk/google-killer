@@ -36,3 +36,8 @@ export interface GraphData {
     edges: Edge[];
     path: string[]; // List of Node IDs in the path
 }
+
+export interface LatestSearch {
+    query: string;
+    searchedAt: string;
+}

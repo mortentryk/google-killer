@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
+import React from 'react';
 
 interface Props {
+    query: string;
+    onQueryChange: (query: string) => void;
     onSearch: (query: string) => void;
 }
 
-export function SearchBar({ onSearch }: Props) {
-    const [query, setQuery] = useState('');
-
+export function SearchBar({ query, onQueryChange, onSearch }: Props) {
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (query.trim()) onSearch(query);
@@ -18,12 +18,14 @@ export function SearchBar({ onSearch }: Props) {
                 <input
                     type="text"
                     value={query}
-                    onChange={(e) => setQuery(e.target.value)}
+                    onChange={(e) => onQueryChange(e.target.value)}
                     placeholder="How do I fix..."
+                    aria-label="Search topic"
                     className="w-full bg-surface border border-gray-700 rounded-full py-3 px-6 text-text focus:outline-none focus:border-primary transition-colors shadow-lg placeholder-gray-500"
                 />
                 <button
                     type="submit"
+                    aria-label="Search"
                     className="absolute right-2 top-1/2 -translate-y-1/2 bg-primary text-white rounded-full p-2 hover:bg-opacity-90 transition-opacity"
                 >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

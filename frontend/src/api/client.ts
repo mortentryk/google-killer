@@ -1,4 +1,4 @@
-import { GraphData, Node } from '../types';
+import { GraphData, LatestSearch, Node } from '../types';
 
 const API_URL = 'http://localhost:3001';
 
@@ -32,6 +32,13 @@ export async function searchNodes(query: string): Promise<GraphData> {
             path: ['1']
         };
     }
+}
+
+export async function getLatestSearches(): Promise<LatestSearch[]> {
+    const res = await fetch(`${API_URL}/searches`);
+    if (!res.ok) throw new Error('Failed to fetch latest searches');
+    const data: { searches: LatestSearch[] } = await res.json();
+    return data.searches ?? [];
 }
 
 export async function getNode(id: string): Promise<Node> {
