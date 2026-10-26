@@ -42,13 +42,8 @@ export default function App() {
     try {
       const data = await searchNodes(trimmed);
       setGraphData(data);
-      if (data.path.length > 0) {
-        const lastNodeId = data.path[data.path.length - 1];
-        const lastNode = data.nodes.find((n) => n.id === lastNodeId);
-        if (lastNode) setSelectedNode(lastNode);
-      } else {
-        setSelectedNode(null);
-      }
+      // Keep the mind map visible; open details when a node is clicked.
+      setSelectedNode(null);
     } catch (err) {
       setGraphData({ nodes: [], edges: [], path: [] });
       setSelectedNode(null);
@@ -84,7 +79,7 @@ export default function App() {
   }
 
   return (
-    <div className="app w-full min-h-screen flex flex-col bg-[#f8f9fa] text-[#202124]">
+    <div className="app w-full h-screen flex flex-col overflow-hidden bg-[#f8f9fa] text-[#202124]">
       <ResultsHeader
         query={query}
         onQueryChange={setQuery}
@@ -100,7 +95,7 @@ export default function App() {
         </p>
       )}
 
-      <div className="flex-1 relative min-h-[calc(100vh-120px)]">
+      <div className="flex-1 min-h-0 relative">
         {loading && (
           <div className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-white/80">
             <div className="w-10 h-10 border-2 border-[#4285F4] border-t-transparent rounded-full animate-spin" />

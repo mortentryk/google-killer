@@ -57,7 +57,7 @@ export function NodeDetailsPanel({ node, onClose }: Props) {
     };
 
     return (
-        <div className="fixed right-0 top-[105px] md:top-[113px] h-[calc(100%-105px)] md:h-[calc(100%-113px)] w-full md:w-[420px] bg-white border-l border-[#ebebeb] shadow-lg z-40 flex flex-col">
+        <div className="fixed right-0 bottom-0 md:top-[113px] md:bottom-0 h-[42vh] md:h-[calc(100%-113px)] w-full md:w-[400px] max-w-full bg-white border-t md:border-t-0 md:border-l border-[#ebebeb] shadow-lg z-40 flex flex-col rounded-t-xl md:rounded-none">
             <div className="p-4 border-b border-[#ebebeb] flex justify-between items-start gap-2">
                 <div>
                     <p className="text-xs text-[#70757a] uppercase tracking-wide">Featured result</p>

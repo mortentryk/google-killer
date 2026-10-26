@@ -16,3 +16,9 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+/* React Flow needs an explicit height chain from the flex layout */
+.react-flow {
+  width: 100%;
+  height: 100%;
+}

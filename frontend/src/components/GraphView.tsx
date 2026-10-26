@@ -1,9 +1,11 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import ReactFlow, {
     Node as FlowNode,
     Edge as FlowEdge,
     Controls,
     Background,
+    ReactFlowProvider,
+    useReactFlow,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { GraphData, Node } from '../types';
@@ -13,7 +15,9 @@ interface Props {
     onNodeClick: (node: Node) => void;
 }
 
-export function GraphView({ data, onNodeClick }: Props) {
+function GraphCanvas({ data, onNodeClick }: Props) {
+    const { fitView } = useReactFlow();
+
     const nodes: FlowNode[] = useMemo(() => {
         return data.nodes.map((n, i) => ({
             id: n.id,
@@ -34,7 +38,7 @@ export function GraphView({ data, onNodeClick }: Props) {
     }, [data.nodes]);
 
     const edges: FlowEdge[] = useMemo(() => {
-        return data.edges.map(e => ({
+        return data.edges.map((e) => ({
             id: e.id,
             source: e.fromNodeId,
             target: e.toNodeId,
@@ -43,22 +47,38 @@ export function GraphView({ data, onNodeClick }: Props) {
         }));
     }, [data.edges]);
 
+    useEffect(() => {
+        if (data.nodes.length === 0) return;
+        const t = window.setTimeout(() => {
+            fitView({ padding: 0.25, duration: 200 });
+        }, 50);
+        return () => window.clearTimeout(t);
+    }, [data.nodes, data.edges, fitView]);
+
+    return (
+        <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            onNodeClick={(_, node) => onNodeClick(node.data.original)}
+            proOptions={{ hideAttribution: true }}
+            style={{ width: '100%', height: '100%' }}
+        >
+            <Background color="#dadce0" gap={24} size={1} />
+            <Controls className="!bg-white !border-[#dadce0] !shadow-sm" />
+        </ReactFlow>
+    );
+}
+
+export function GraphView({ data, onNodeClick }: Props) {
     if (data.nodes.length === 0) {
-        return <div className="w-full h-full min-h-[400px] bg-[#f8f9fa]" />;
+        return null;
     }
 
     return (
-        <div className="w-full h-full min-h-[calc(100vh-120px)] bg-[#f8f9fa]">
-            <ReactFlow
-                nodes={nodes}
-                edges={edges}
-                onNodeClick={(_, node) => onNodeClick(node.data.original)}
-                fitView
-                fitViewOptions={{ padding: 0.2 }}
-            >
-                <Background color="#dadce0" gap={24} size={1} />
-                <Controls className="!bg-white !border-[#dadce0] !shadow-sm" />
-            </ReactFlow>
+        <div className="absolute inset-0 bg-[#f8f9fa]">
+            <ReactFlowProvider>
+                <GraphCanvas data={data} onNodeClick={onNodeClick} />
+            </ReactFlowProvider>
         </div>
     );
 }
