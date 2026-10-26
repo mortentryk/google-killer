@@ -181,10 +181,10 @@ export default function TopicPage() {
                             <RabbitHoleWalkView
                                 data={graphData}
                                 displayQuery={graphData.displayQuery || query}
-                                onFollowBranch={(node) => {
+                                onFollowBranch={(node: Node) => {
                                     if (node.id === graphData.primaryNodeId) return;
                                 }}
-                                onOpenNewTopic={(q) => void runSearch(q, 'trail')}
+                                onOpenNewTopic={(q: string) => void runSearch(q, 'trail')}
                                 onShowAnswer={() => setView('answer')}
                             />
                         </div>
