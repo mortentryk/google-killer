@@ -22,7 +22,7 @@ const commentWriteLimiter = rateLimit({ prefix: 'comments-write', windowMs: 15 *
 const linkWriteLimiter = rateLimit({ prefix: 'links-write', windowMs: 15 * 60_000, max: 15 });
 
 app.get('/', (req, res) => {
-    res.send('Antigravity API is running');
+    res.send('Rabbit Hole API is running');
 });
 
 app.get('/health', async (_req, res) => {

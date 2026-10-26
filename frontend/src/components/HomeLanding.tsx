@@ -22,13 +22,16 @@ export function HomeLanding({ query, onQueryChange, onSearch, history }: Props) 
         <div className="min-h-screen flex flex-col bg-white text-[#202124]">
             <header className="flex justify-end gap-4 px-5 py-4 text-sm text-[#202124]">
                 <span className="hover:underline cursor-default">Shared answers</span>
-                <span className="hover:underline cursor-default">Discuss</span>
+                <span className="hover:underline cursor-default">Side trails</span>
             </header>
 
             <main className="flex-1 flex flex-col items-center justify-center px-4 pb-32 -mt-16">
-                <div className="mb-8">
+                <div className="mb-3">
                     <Logo size="hero" />
                 </div>
+                <p className="text-[#70757a] text-sm sm:text-base mb-8 max-w-md text-center">
+                    Start with one question. Follow the map until you land somewhere else.
+                </p>
 
                 <SearchBar
                     value={query}
@@ -44,14 +47,14 @@ export function HomeLanding({ query, onQueryChange, onSearch, history }: Props) 
                         onClick={() => query.trim() && onSearch(query.trim())}
                         className="bg-[#f8f9fa] border border-transparent hover:border-[#dadce0] hover:shadow-sm text-sm text-[#3c4043] px-5 py-2 rounded-sm"
                     >
-                        Mind Map Search
+                        Go down the hole
                     </button>
                     <button
                         type="button"
                         onClick={lucky}
                         className="bg-[#f8f9fa] border border-transparent hover:border-[#dadce0] hover:shadow-sm text-sm text-[#3c4043] px-5 py-2 rounded-sm"
                     >
-                        I&apos;m Feeling Curious
+                        Surprise me
                     </button>
                 </div>
 
@@ -78,7 +81,7 @@ export function HomeLanding({ query, onQueryChange, onSearch, history }: Props) 
             </main>
 
             <footer className="text-center text-xs text-[#70757a] pb-6">
-                One stored answer per question · discuss on the map
+                One shared answer per question · branch off on the mind map
             </footer>
         </div>
     );

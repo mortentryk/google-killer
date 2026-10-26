@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
-const STORAGE_KEY = 'seekmap.searchHistory';
+const STORAGE_KEY = 'rabbithole.searchHistory';
 const MAX = 8;
 
 export function useSearchHistory() {
