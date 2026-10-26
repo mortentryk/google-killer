@@ -1,6 +1,7 @@
 import { GraphData, Node, Comment } from '../types';
 import { getApiBase } from './config';
 import { parseGraphPayload, parseNode } from '../utils/parseNode';
+import { errorFromBody, readJsonBody } from './http';
 
 async function apiFetch(path: string, init?: RequestInit) {
     const res = await fetch(`${getApiBase()}${path}`, init);
@@ -8,11 +9,11 @@ async function apiFetch(path: string, init?: RequestInit) {
 }
 
 async function parseGraphResponse(res: Response): Promise<GraphData> {
-    const body = await res.json();
+    const body = await readJsonBody(res);
     if (!res.ok) {
-        throw new Error(body.error || 'Request failed');
+        throw new Error(errorFromBody(body, 'Request failed'));
     }
-    return parseGraphPayload(body);
+    return parseGraphPayload(body as Record<string, unknown>);
 }
 
 export async function searchNodes(query: string): Promise<GraphData> {
@@ -27,30 +28,37 @@ export async function getTopicBySlug(slug: string): Promise<GraphData> {
 
 export async function getNode(id: string): Promise<Node> {
     const res = await apiFetch(`/nodes/${id}`);
-    if (!res.ok) throw new Error('Failed to fetch node');
-    const body = await res.json();
-    return parseNode(body);
+    const body = await readJsonBody(res);
+    if (!res.ok) throw new Error(errorFromBody(body, 'Failed to fetch node'));
+    return parseNode(body as Record<string, unknown>);
 }
 
 export async function getComments(nodeId: string): Promise<Comment[]> {
     const res = await apiFetch(`/nodes/${nodeId}/comments`);
-    if (!res.ok) throw new Error('Failed to load comments');
-    return res.json();
+    const body = await readJsonBody(res);
+    if (!res.ok) {
+        throw new Error(errorFromBody(body, 'Failed to load comments'));
+    }
+    if (!Array.isArray(body)) {
+        throw new Error('Failed to load comments');
+    }
+    return body as Comment[];
 }
 
 export async function postComment(
     nodeId: string,
     text: string,
-    authorName?: string
+    authorName?: string,
+    honeypot?: string
 ): Promise<Comment> {
     const res = await apiFetch(`/nodes/${nodeId}/comments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, authorName }),
+        body: JSON.stringify({ text, authorName, website: honeypot ?? '' }),
     });
+    const body = await readJsonBody(res);
     if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body.error || 'Failed to post comment');
+        throw new Error(errorFromBody(body, 'Failed to post comment'));
     }
-    return res.json();
+    return body as Comment;
 }

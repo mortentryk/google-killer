@@ -15,6 +15,7 @@ export function DiscussionView({ nodeId, nodeTitle, embedded }: Props) {
     const [text, setText] = useState('');
     const [authorName, setAuthorName] = useState('');
     const [posting, setPosting] = useState(false);
+    const [honeypot, setHoneypot] = useState('');
 
     useEffect(() => {
         let cancelled = false;
@@ -40,7 +41,7 @@ export function DiscussionView({ nodeId, nodeTitle, embedded }: Props) {
         setPosting(true);
         setError(null);
         try {
-            const created = await postComment(nodeId, text, authorName || undefined);
+            const created = await postComment(nodeId, text, authorName || undefined, honeypot);
             setComments((prev) => [...prev, created]);
             setText('');
         } catch (err) {
@@ -73,6 +74,16 @@ export function DiscussionView({ nodeId, nodeTitle, embedded }: Props) {
             </div>
 
             <form onSubmit={onSubmit} className="space-y-2 border-t border-[#ebebeb] pt-4">
+                <input
+                    type="text"
+                    name="website"
+                    value={honeypot}
+                    onChange={(e) => setHoneypot(e.target.value)}
+                    tabIndex={-1}
+                    autoComplete="off"
+                    aria-hidden
+                    className="hidden"
+                />
                 <input
                     value={authorName}
                     onChange={(e) => setAuthorName(e.target.value)}

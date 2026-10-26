@@ -3,14 +3,21 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import prisma from './db/client';
 import { resolveSearch, resolveTopicBySlug } from './search/resolveSearch';
+import { rateLimit } from './middleware/rateLimit';
+import { commentSpamGuard } from './middleware/commentSpam';
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+app.set('trust proxy', 1);
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '32kb' }));
+
+const searchLimiter = rateLimit({ prefix: 'search', windowMs: 60_000, max: 40 });
+const commentReadLimiter = rateLimit({ prefix: 'comments-read', windowMs: 60_000, max: 120 });
+const commentWriteLimiter = rateLimit({ prefix: 'comments-write', windowMs: 15 * 60_000, max: 20 });
 
 app.get('/', (req, res) => {
     res.send('Antigravity API is running');
@@ -25,7 +32,7 @@ app.get('/health', async (_req, res) => {
     }
 });
 
-app.get('/search', async (req, res) => {
+app.get('/search', searchLimiter, async (req, res) => {
     const { q } = req.query;
     if (!q || typeof q !== 'string') {
         res.status(400).json({ error: 'Query parameter q is required' });
@@ -79,7 +86,7 @@ app.get('/nodes/:id', async (req, res) => {
     }
 });
 
-app.get('/nodes/:id/comments', async (req, res) => {
+app.get('/nodes/:id/comments', commentReadLimiter, async (req, res) => {
     const { id } = req.params;
     try {
         const comments = await prisma.comment.findMany({
@@ -93,7 +100,7 @@ app.get('/nodes/:id/comments', async (req, res) => {
     }
 });
 
-app.post('/nodes/:id/comments', async (req, res) => {
+app.post('/nodes/:id/comments', commentWriteLimiter, commentSpamGuard, async (req, res) => {
     const { id } = req.params;
     const { text, authorName } = req.body as { text?: string; authorName?: string };
 
