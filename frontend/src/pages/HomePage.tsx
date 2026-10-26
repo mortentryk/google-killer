@@ -40,7 +40,7 @@ export default function HomePage() {
             const data = await searchNodes(trimmed);
             push(trimmed);
             if (data.slug && data.primaryNodeId) {
-                await recordVisit({
+                void recordVisit({
                     nodeId: data.primaryNodeId,
                     slug: data.slug,
                     displayQuery: data.displayQuery || trimmed,

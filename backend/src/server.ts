@@ -33,7 +33,7 @@ app.get('/', (req, res) => {
 app.get('/health', async (_req, res) => {
     try {
         await prisma.$queryRaw`SELECT 1`;
-        res.json({ ok: true });
+        res.json({ ok: true, version: 2, features: { journeys: true, recentSearches: true } });
     } catch {
         res.status(503).json({ ok: false });
     }

@@ -15,6 +15,7 @@ type RabbitHoleContextValue = {
     journeyId: string | null;
     steps: JourneyStep[];
     loading: boolean;
+    storiesEnabled: boolean;
     recordVisit: (input: RecordInput) => Promise<void>;
     refresh: () => Promise<void>;
     startNewHole: () => Promise<void>;
@@ -27,6 +28,7 @@ export function RabbitHoleProvider({ children }: { children: React.ReactNode }) 
     const [journeyId, setJourneyId] = useState<string | null>(() => sessionStorage.getItem(STORAGE_KEY));
     const [steps, setSteps] = useState<JourneyStep[]>([]);
     const [loading, setLoading] = useState(false);
+    const [storiesEnabled, setStoriesEnabled] = useState(true);
 
     const applyStory = useCallback((story: RabbitHoleStory | null) => {
         if (!story) {
@@ -39,6 +41,7 @@ export function RabbitHoleProvider({ children }: { children: React.ReactNode }) 
     }, []);
 
     const refresh = useCallback(async () => {
+        if (!storiesEnabled) return;
         const id = sessionStorage.getItem(STORAGE_KEY);
         if (!id) {
             setSteps([]);
@@ -55,27 +58,38 @@ export function RabbitHoleProvider({ children }: { children: React.ReactNode }) 
         } finally {
             setLoading(false);
         }
-    }, [applyStory]);
+    }, [applyStory, storiesEnabled]);
 
     useEffect(() => {
         void refresh();
     }, [refresh]);
 
-    const ensureJourneyId = useCallback(async (): Promise<string> => {
+    const ensureJourneyId = useCallback(async (): Promise<string | null> => {
+        if (!storiesEnabled) return null;
         const existing = sessionStorage.getItem(STORAGE_KEY);
         if (existing) {
             setJourneyId(existing);
             return existing;
         }
-        const created = await createJourney();
-        sessionStorage.setItem(STORAGE_KEY, created.id);
-        setJourneyId(created.id);
-        return created.id;
-    }, []);
+        try {
+            const created = await createJourney();
+            sessionStorage.setItem(STORAGE_KEY, created.id);
+            setJourneyId(created.id);
+            return created.id;
+        } catch {
+            setStoriesEnabled(false);
+            sessionStorage.removeItem(STORAGE_KEY);
+            setJourneyId(null);
+            setSteps([]);
+            return null;
+        }
+    }, [storiesEnabled]);
 
     const recordVisit = useCallback(
         async (input: RecordInput) => {
             const id = await ensureJourneyId();
+            if (!id) return;
+
             const last = steps[steps.length - 1];
             if (last?.slug === input.slug) return;
 
@@ -96,24 +110,31 @@ export function RabbitHoleProvider({ children }: { children: React.ReactNode }) 
     const startNewHole = useCallback(async () => {
         sessionStorage.removeItem(STORAGE_KEY);
         setSteps([]);
-        const created = await createJourney();
-        sessionStorage.setItem(STORAGE_KEY, created.id);
-        setJourneyId(created.id);
+        setStoriesEnabled(true);
+        try {
+            const created = await createJourney();
+            sessionStorage.setItem(STORAGE_KEY, created.id);
+            setJourneyId(created.id);
+        } catch {
+            setStoriesEnabled(false);
+            setJourneyId(null);
+        }
     }, []);
 
-    const sharePath = journeyId ? `/holes/${journeyId}` : null;
+    const sharePath = journeyId && storiesEnabled ? `/holes/${journeyId}` : null;
 
     const value = useMemo(
         () => ({
             journeyId,
             steps,
             loading,
+            storiesEnabled,
             recordVisit,
             refresh,
             startNewHole,
             sharePath,
         }),
-        [journeyId, steps, loading, recordVisit, refresh, startNewHole, sharePath]
+        [journeyId, steps, loading, storiesEnabled, recordVisit, refresh, startNewHole, sharePath]
     );
 
     return <RabbitHoleContext.Provider value={value}>{children}</RabbitHoleContext.Provider>;

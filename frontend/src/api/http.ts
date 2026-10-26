@@ -17,6 +17,17 @@ export async function readJsonBody(res: Response): Promise<unknown> {
                 'Cannot reach the API. Start the backend (npm run dev in backend/) on port 3001.'
             );
         }
+        if (/<!DOCTYPE html>/i.test(text) || /<title>Error<\/title>/i.test(text)) {
+            const routeMatch = text.match(/Cannot (GET|POST|PUT|PATCH|DELETE) ([^\s<]+)/i);
+            if (routeMatch) {
+                throw new Error(
+                    `API route ${routeMatch[2]} is missing — restart the backend after git pull (cd backend && npx prisma db push && npm run dev).`
+                );
+            }
+            throw new Error(
+                'Server returned an HTML error instead of JSON. Restart the backend (cd backend && npm run dev).'
+            );
+        }
         throw new Error(preview || `Invalid server response (${res.status})`);
     }
 }
