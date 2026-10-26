@@ -62,7 +62,7 @@ export default function HomePage() {
                 });
             }
             if (data.slug) {
-                navigate(`/q/${data.slug}`);
+                navigate(`/q/${encodeURIComponent(data.slug)}?hole=1`);
             } else {
                 setError('Missing topic link from server');
             }

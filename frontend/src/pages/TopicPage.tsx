@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ResultsHeader } from '../components/ResultsHeader';
 import { GraphView } from '../components/GraphView';
+import { RabbitHoleWalkView } from '../components/RabbitHoleWalkView';
 import { NodeDetailsPanel } from '../components/NodeDetailsPanel';
 import { AnswerDiscussionPanel } from '../components/AnswerDiscussionPanel';
 import { getNode, getTopicBySlug, searchNodes } from '../api/client';
@@ -23,6 +24,7 @@ export default function TopicPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [view, setView] = useState<ResultView>('answer');
+    const [mapMode, setMapMode] = useState<'walk' | 'network'>('walk');
     const [selectedNode, setSelectedNode] = useState<Node | null>(null);
 
     const loadTopic = useCallback(async (topicSlug: string) => {
@@ -32,8 +34,8 @@ export default function TopicPage() {
             const data = await getTopicBySlug(topicSlug);
             setGraphData(data);
             setQuery(data.displayQuery || '');
-            setView('answer');
             setSelectedNode(null);
+            setMapMode('walk');
         } catch (err) {
             setGraphData(null);
             setError(err instanceof Error ? err.message : 'Topic not found');
@@ -48,18 +50,26 @@ export default function TopicPage() {
 
     useEffect(() => {
         const fromFeed = searchParams.get('discuss') === '1';
+        const startHole = searchParams.get('hole') === '1';
         setFocusDiscussion(fromFeed);
-        if (fromFeed) {
+        if (startHole) {
+            setView('map');
+            setMapMode('walk');
+        } else {
+            setView('answer');
+        }
+        if (fromFeed || startHole) {
             setSearchParams(
                 (prev) => {
                     const next = new URLSearchParams(prev);
                     next.delete('discuss');
+                    next.delete('hole');
                     return next;
                 },
                 { replace: true }
             );
         }
-        // Read ?discuss=1 only when the topic slug changes (not when we strip the query param).
+        // Read query flags only when the topic slug changes.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [slug]);
 
@@ -149,9 +159,44 @@ export default function TopicPage() {
                     />
                 )}
 
-                {!loading && graphData && view === 'map' && (
-                    <div className="absolute inset-0">
-                        <GraphView data={graphData} onNodeClick={setSelectedNode} />
+                {!loading && graphData && view === 'map' && mapMode === 'walk' && (
+                    <div className="absolute inset-0 flex flex-col">
+                        <div className="shrink-0 flex justify-end px-4 py-2 bg-white border-b border-[#ebebeb]">
+                            <button
+                                type="button"
+                                onClick={() => setMapMode('network')}
+                                className="text-xs text-[#1a0dab] hover:underline"
+                            >
+                                Full network map
+                            </button>
+                        </div>
+                        <div className="flex-1 min-h-0">
+                            <RabbitHoleWalkView
+                                data={graphData}
+                                displayQuery={graphData.displayQuery || query}
+                                onFollowBranch={(node) => {
+                                    if (node.id === graphData.primaryNodeId) return;
+                                }}
+                                onOpenNewTopic={(q) => void runSearch(q, 'trail')}
+                            />
+                        </div>
+                    </div>
+                )}
+
+                {!loading && graphData && view === 'map' && mapMode === 'network' && (
+                    <div className="absolute inset-0 flex flex-col">
+                        <div className="shrink-0 flex justify-end px-4 py-2 bg-white border-b border-[#ebebeb] z-10">
+                            <button
+                                type="button"
+                                onClick={() => setMapMode('walk')}
+                                className="text-xs text-[#1a0dab] hover:underline"
+                            >
+                                Guided rabbit hole
+                            </button>
+                        </div>
+                        <div className="flex-1 min-h-0 relative">
+                            <GraphView data={graphData} onNodeClick={setSelectedNode} />
+                        </div>
                     </div>
                 )}
             </div>
