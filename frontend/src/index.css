@@ -22,3 +22,18 @@ code {
   width: 100%;
   height: 100%;
 }
+
+@keyframes mindmap-node-in {
+  from {
+    opacity: 0;
+    transform: scale(0.82);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.react-flow__node.mindmap-node-enter {
+  animation: mindmap-node-in 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
