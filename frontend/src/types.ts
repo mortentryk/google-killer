@@ -65,6 +65,17 @@ export interface JourneyStep {
     timestamp: string;
 }
 
+export interface RabbitHoleSummary {
+    id: string;
+    startedAt: string;
+    updatedAt: string;
+    stepCount: number;
+    firstQuery: string;
+    lastQuery: string;
+    firstSlug: string;
+    lastSlug: string;
+}
+
 export interface RabbitHoleStory {
     id: string;
     startedAt: string;

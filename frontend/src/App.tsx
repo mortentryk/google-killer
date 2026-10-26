@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import HomePage from './pages/HomePage';
 import HoleStoryPage from './pages/HoleStoryPage';
+import HolesFeedPage from './pages/HolesFeedPage';
 import SearchesPage from './pages/SearchesPage';
 import TopicPage from './pages/TopicPage';
 import { RabbitHoleProvider } from './hooks/useRabbitHole';
@@ -13,6 +14,7 @@ export default function App() {
                 <Routes>
                     <Route path="/" element={<HomePage />} />
                     <Route path="/searches" element={<SearchesPage />} />
+                    <Route path="/holes" element={<HolesFeedPage />} />
                     <Route path="/holes/:id" element={<HoleStoryPage />} />
                     <Route path="/q/:slug" element={<TopicPage />} />
                     <Route path="*" element={<Navigate to="/" replace />} />

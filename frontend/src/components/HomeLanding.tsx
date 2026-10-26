@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom';
 import { Logo } from './Logo';
 import { SearchBar } from './SearchBar';
 import { RecentSearchesList } from './RecentSearchesList';
-import { RecentSearch } from '../types';
+import { RecentHolesList } from './RecentHolesList';
+import { RabbitHoleSummary, RecentSearch } from '../types';
 
 const SAMPLES = [
     'fix leaking radiator',
@@ -13,7 +14,8 @@ const SAMPLES = [
     'home heating not working',
 ];
 
-const HOME_PREVIEW_COUNT = 5;
+const HOME_SEARCH_PREVIEW = 4;
+const HOME_HOLES_PREVIEW = 3;
 
 interface Props {
     query: string;
@@ -23,6 +25,8 @@ interface Props {
     history: string[];
     recentSearches: RecentSearch[];
     recentLoading?: boolean;
+    recentHoles: RabbitHoleSummary[];
+    holesLoading?: boolean;
 }
 
 export function HomeLanding({
@@ -33,6 +37,8 @@ export function HomeLanding({
     history,
     recentSearches,
     recentLoading,
+    recentHoles,
+    holesLoading,
 }: Props) {
     const lucky = () => {
         const pick = SAMPLES[Math.floor(Math.random() * SAMPLES.length)];
@@ -40,16 +46,20 @@ export function HomeLanding({
         onSearch(pick);
     };
 
-    const preview = recentSearches.slice(0, HOME_PREVIEW_COUNT);
-    const hasMore = recentSearches.length > HOME_PREVIEW_COUNT;
+    const searchPreview = recentSearches.slice(0, HOME_SEARCH_PREVIEW);
+    const hasMoreSearches = recentSearches.length > HOME_SEARCH_PREVIEW;
+    const holesPreview = recentHoles.slice(0, HOME_HOLES_PREVIEW);
+    const hasMoreHoles = recentHoles.length > HOME_HOLES_PREVIEW;
 
     return (
         <div className="min-h-screen flex flex-col bg-white text-[#202124]">
             <header className="flex justify-end gap-4 px-5 py-4 text-sm text-[#202124]">
-                <Link to="/searches" className="hover:underline text-[#1a0dab]">
-                    Latest searches
+                <Link to="/holes" className="hover:underline text-[#1a0dab]">
+                    Stories
                 </Link>
-                <span className="hover:underline cursor-default text-[#70757a]">Side trails</span>
+                <Link to="/searches" className="hover:underline text-[#1a0dab]">
+                    Questions
+                </Link>
             </header>
 
             <main className="flex-1 flex flex-col items-center justify-center px-4 pb-16 -mt-12">
@@ -85,12 +95,36 @@ export function HomeLanding({
                     </button>
                 </div>
 
-                {(preview.length > 0 || recentLoading) && (
+                {(holesPreview.length > 0 || holesLoading) && (
                     <div className="mt-12 w-full max-w-lg">
                         <div className="flex items-end justify-between gap-2 mb-3">
                             <div className="text-left">
-                                <p className="text-xs text-[#70757a] uppercase tracking-wide">Latest searches</p>
-                                <p className="text-xs text-[#70757a] mt-1">Tap to help in the discussion</p>
+                                <p className="text-xs text-[#70757a] uppercase tracking-wide">Rabbit hole stories</p>
+                                <p className="text-xs text-[#70757a] mt-1">Real trails across questions (2+ stops)</p>
+                            </div>
+                            <Link to="/holes" className="text-sm text-[#1a0dab] hover:underline shrink-0">
+                                See all
+                            </Link>
+                        </div>
+                        <div className="rounded-lg border border-[#ebebeb] bg-[#f8f9fa] overflow-hidden">
+                            <RecentHolesList items={holesPreview} loading={holesLoading} />
+                        </div>
+                        {hasMoreHoles && (
+                            <p className="text-center mt-3">
+                                <Link to="/holes" className="text-sm text-[#1a0dab] hover:underline">
+                                    More stories →
+                                </Link>
+                            </p>
+                        )}
+                    </div>
+                )}
+
+                {(searchPreview.length > 0 || recentLoading) && (
+                    <div className="mt-8 w-full max-w-lg">
+                        <div className="flex items-end justify-between gap-2 mb-3">
+                            <div className="text-left">
+                                <p className="text-xs text-[#70757a] uppercase tracking-wide">Questions people asked</p>
+                                <p className="text-xs text-[#70757a] mt-1">One row per topic · tap to discuss</p>
                             </div>
                             <Link to="/searches" className="text-sm text-[#1a0dab] hover:underline shrink-0">
                                 See all
@@ -98,15 +132,15 @@ export function HomeLanding({
                         </div>
                         <div className="rounded-lg border border-[#ebebeb] bg-[#f8f9fa] overflow-hidden">
                             <RecentSearchesList
-                                items={preview}
+                                items={searchPreview}
                                 loading={recentLoading}
                                 onOpenTopic={onOpenTopic}
                             />
                         </div>
-                        {hasMore && (
+                        {hasMoreSearches && (
                             <p className="text-center mt-3">
                                 <Link to="/searches" className="text-sm text-[#1a0dab] hover:underline">
-                                    View all recent searches →
+                                    All questions →
                                 </Link>
                             </p>
                         )}

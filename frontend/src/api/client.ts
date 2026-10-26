@@ -1,4 +1,13 @@
-import { GraphData, Node, Comment, WebLink, RecentSearch, RabbitHoleStory, JourneyStep } from '../types';
+import {
+    GraphData,
+    Node,
+    Comment,
+    WebLink,
+    RecentSearch,
+    RabbitHoleStory,
+    RabbitHoleSummary,
+    JourneyStep,
+} from '../types';
 import { getApiBase } from './config';
 import { parseGraphPayload, parseNode } from '../utils/parseNode';
 import { errorFromBody, readJsonBody } from './http';
@@ -14,6 +23,18 @@ async function parseGraphResponse(res: Response): Promise<GraphData> {
         throw new Error(errorFromBody(body, 'Request failed'));
     }
     return parseGraphPayload(body as Record<string, unknown>);
+}
+
+export async function getRecentHoles(limit = 12): Promise<RabbitHoleSummary[]> {
+    const res = await apiFetch(`/holes/recent?limit=${limit}`);
+    const body = await readJsonBody(res);
+    if (!res.ok) {
+        throw new Error(errorFromBody(body, 'Failed to load rabbit hole stories'));
+    }
+    if (!Array.isArray(body)) {
+        throw new Error('Failed to load rabbit hole stories');
+    }
+    return body as RabbitHoleSummary[];
 }
 
 export async function createJourney(): Promise<{ id: string; startedAt: string }> {

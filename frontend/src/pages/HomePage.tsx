@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { HomeLanding } from '../components/HomeLanding';
-import { getRecentSearches, searchNodes } from '../api/client';
+import { getRecentHoles, getRecentSearches, searchNodes } from '../api/client';
 import { useSearchHistory } from '../hooks/useSearchHistory';
-import { RecentSearch } from '../types';
+import { RabbitHoleSummary, RecentSearch } from '../types';
 import { useRabbitHole } from '../hooks/useRabbitHole';
 
 export default function HomePage() {
@@ -11,7 +11,9 @@ export default function HomePage() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [recentSearches, setRecentSearches] = useState<RecentSearch[]>([]);
+    const [recentHoles, setRecentHoles] = useState<RabbitHoleSummary[]>([]);
     const [recentLoading, setRecentLoading] = useState(true);
+    const [holesLoading, setHolesLoading] = useState(true);
     const navigate = useNavigate();
     const { history, push } = useSearchHistory();
     const { recordVisit } = useRabbitHole();
@@ -19,7 +21,7 @@ export default function HomePage() {
     const loadRecent = useCallback(async () => {
         setRecentLoading(true);
         try {
-            setRecentSearches(await getRecentSearches(20));
+            setRecentSearches(await getRecentSearches(12));
         } catch {
             setRecentSearches([]);
         } finally {
@@ -27,9 +29,21 @@ export default function HomePage() {
         }
     }, []);
 
+    const loadHoles = useCallback(async () => {
+        setHolesLoading(true);
+        try {
+            setRecentHoles(await getRecentHoles(8));
+        } catch {
+            setRecentHoles([]);
+        } finally {
+            setHolesLoading(false);
+        }
+    }, []);
+
     useEffect(() => {
         void loadRecent();
-    }, [loadRecent]);
+        void loadHoles();
+    }, [loadRecent, loadHoles]);
 
     const onSearch = async (raw: string) => {
         const trimmed = raw.trim();
@@ -80,6 +94,8 @@ export default function HomePage() {
                 history={history}
                 recentSearches={recentSearches}
                 recentLoading={recentLoading}
+                recentHoles={recentHoles}
+                holesLoading={holesLoading}
             />
         </>
     );

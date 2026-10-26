@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 import prisma from './db/client';
 import { resolveSearch, resolveTopicBySlug } from './search/resolveSearch';
 import { listRecentSearches, recordSearchEvent } from './search/recentSearches';
-import { appendJourneyStep, createJourney, getJourneyPublic } from './journey/journeyService';
+import { appendJourneyStep, createJourney, getJourneyPublic, listRecentHoles } from './journey/journeyService';
 import { rateLimit } from './middleware/rateLimit';
 import { commentSpamGuard } from './middleware/commentSpam';
 import { linkSpamGuard } from './middleware/linkSpam';
@@ -33,7 +33,7 @@ app.get('/', (req, res) => {
 app.get('/health', async (_req, res) => {
     try {
         await prisma.$queryRaw`SELECT 1`;
-        res.json({ ok: true, version: 2, features: { journeys: true, recentSearches: true } });
+        res.json({ ok: true, version: 3, features: { journeys: true, recentSearches: true, holeFeed: true } });
     } catch {
         res.status(503).json({ ok: false });
     }
@@ -74,6 +74,29 @@ app.get('/searches/recent', recentSearchesLimiter, async (req, res) => {
                 slug: row.slug,
                 createdAt: row.createdAt.toISOString(),
                 commentCount: row.commentCount,
+            }))
+        );
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+app.get('/holes/recent', journeyReadLimiter, async (req, res) => {
+    const rawLimit = req.query.limit;
+    const limit = typeof rawLimit === 'string' ? Number.parseInt(rawLimit, 10) : 12;
+    try {
+        const rows = await listRecentHoles(Number.isFinite(limit) ? limit : 12);
+        res.json(
+            rows.map((row) => ({
+                id: row.id,
+                startedAt: row.startedAt.toISOString(),
+                updatedAt: row.updatedAt.toISOString(),
+                stepCount: row.stepCount,
+                firstQuery: row.firstQuery,
+                lastQuery: row.lastQuery,
+                firstSlug: row.firstSlug,
+                lastSlug: row.lastSlug,
             }))
         );
     } catch (error) {

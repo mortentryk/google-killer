@@ -62,6 +62,48 @@ export async function appendJourneyStep(journeyId: string, input: JourneyStepInp
     });
 }
 
+export type RecentHoleSummary = {
+    id: string;
+    startedAt: Date;
+    updatedAt: Date;
+    stepCount: number;
+    firstQuery: string;
+    lastQuery: string;
+    firstSlug: string;
+    lastSlug: string;
+};
+
+export async function listRecentHoles(limit: number): Promise<RecentHoleSummary[]> {
+    const take = Math.min(Math.max(limit, 1), 50);
+
+    const journeys = await prisma.journey.findMany({
+        orderBy: { startedAt: 'desc' },
+        take: 150,
+        include: {
+            steps: { orderBy: { order: 'asc' } },
+        },
+    });
+
+    return journeys
+        .filter((j) => j.steps.length >= 2)
+        .map((j) => {
+            const first = j.steps[0];
+            const last = j.steps[j.steps.length - 1];
+            return {
+                id: j.id,
+                startedAt: j.startedAt,
+                updatedAt: last.timestamp,
+                stepCount: j.steps.length,
+                firstQuery: first.displayQuery,
+                lastQuery: last.displayQuery,
+                firstSlug: first.slug,
+                lastSlug: last.slug,
+            };
+        })
+        .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
+        .slice(0, take);
+}
+
 export async function getJourneyPublic(journeyId: string) {
     const journey = await prisma.journey.findUnique({
         where: { id: journeyId },

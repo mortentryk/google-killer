@@ -37,9 +37,14 @@ export default function SearchesPage() {
             <header className="border-b border-[#ebebeb] bg-white sticky top-0 z-10">
                 <div className="max-w-2xl mx-auto flex items-center justify-between gap-4 px-4 sm:px-6 py-3">
                     <Logo size="compact" onClick={() => navigate('/')} />
-                    <Link to="/" className="text-sm text-[#1a0dab] hover:underline shrink-0">
-                        Home
-                    </Link>
+                    <div className="flex gap-4 shrink-0">
+                        <Link to="/holes" className="text-sm text-[#1a0dab] hover:underline">
+                            Stories
+                        </Link>
+                        <Link to="/" className="text-sm text-[#1a0dab] hover:underline">
+                            Home
+                        </Link>
+                    </div>
                 </div>
             </header>
 

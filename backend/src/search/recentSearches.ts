@@ -9,6 +9,8 @@ export type RecentSearchRow = {
 };
 
 const MAX_QUERY_DISPLAY = 120;
+const DEDUPE_FETCH_MULTIPLIER = 8;
+const MAX_FETCH = 400;
 
 type RowBase = {
     id: string;
@@ -24,6 +26,17 @@ export async function recordSearchEvent(displayQuery: string, slug: string): Pro
     await prisma.searchEvent.create({
         data: { displayQuery: trimmed, slug },
     });
+}
+
+function dedupeBySlugNewestFirst(rows: RowBase[]): RowBase[] {
+    const seen = new Set<string>();
+    const out: RowBase[] = [];
+    for (const row of rows) {
+        if (seen.has(row.slug)) continue;
+        seen.add(row.slug);
+        out.push(row);
+    }
+    return out;
 }
 
 async function withCommentCounts(rows: RowBase[]): Promise<RecentSearchRow[]> {
@@ -58,22 +71,30 @@ async function withCommentCounts(rows: RowBase[]): Promise<RecentSearchRow[]> {
 
 export async function listRecentSearches(limit: number): Promise<RecentSearchRow[]> {
     const take = Math.min(Math.max(limit, 1), 50);
+    const fetchCap = Math.min(take * DEDUPE_FETCH_MULTIPLIER, MAX_FETCH);
 
     const events = await prisma.searchEvent.findMany({
         orderBy: { createdAt: 'desc' },
-        take,
+        take: fetchCap,
         select: { id: true, displayQuery: true, slug: true, createdAt: true },
     });
 
-    if (events.length >= take) {
-        return withCommentCounts(events);
+    let merged = dedupeBySlugNewestFirst(events);
+
+    if (merged.length < take) {
+        const seen = new Set(merged.map((r) => r.slug));
+        const topics = await prisma.searchTopic.findMany({
+            orderBy: { createdAt: 'desc' },
+            take: fetchCap,
+            select: { id: true, displayQuery: true, slug: true, createdAt: true },
+        });
+        for (const topic of topics) {
+            if (seen.has(topic.slug)) continue;
+            merged.push(topic);
+            seen.add(topic.slug);
+            if (merged.length >= take) break;
+        }
     }
 
-    const topics = await prisma.searchTopic.findMany({
-        orderBy: { createdAt: 'desc' },
-        take: take - events.length,
-        select: { id: true, displayQuery: true, slug: true, createdAt: true },
-    });
-
-    return withCommentCounts([...events, ...topics]);
+    return withCommentCounts(merged.slice(0, take));
 }
