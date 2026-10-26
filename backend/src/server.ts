@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import prisma from './db/client';
+import { resolveSearch } from './search/resolveSearch';
 
 dotenv.config();
 
@@ -23,41 +24,18 @@ app.get('/search', async (req, res) => {
     }
 
     try {
-        const nodes = await prisma.node.findMany({
-            where: {
-                OR: [
-                    { title: { contains: q, mode: 'insensitive' } },
-                    { aiSummary: { contains: q, mode: 'insensitive' } }
-                ]
-            },
-            take: 5
-        });
+        const result = await resolveSearch(q);
+        if (!result) {
+            res.status(404).json({
+                error: 'No stored answer for this question yet',
+                nodes: [],
+                edges: [],
+                path: [],
+            });
+            return;
+        }
 
-        const edges = await prisma.edge.findMany({
-            where: {
-                OR: [
-                    { fromNodeId: { in: nodes.map(n => n.id) } },
-                    { toNodeId: { in: nodes.map(n => n.id) } }
-                ]
-            }
-        });
-
-        const connectedNodeIds = new Set<string>();
-        edges.forEach(e => {
-            connectedNodeIds.add(e.fromNodeId);
-            connectedNodeIds.add(e.toNodeId);
-        });
-        nodes.forEach(n => connectedNodeIds.add(n.id));
-
-        const allNodes = await prisma.node.findMany({
-            where: { id: { in: Array.from(connectedNodeIds) } }
-        });
-
-        res.json({
-            nodes: allNodes,
-            edges: edges,
-            path: nodes.length > 0 ? [nodes[0].id] : []
-        });
+        res.json(result);
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Internal server error' });
@@ -68,13 +46,59 @@ app.get('/nodes/:id', async (req, res) => {
     const { id } = req.params;
     try {
         const node = await prisma.node.findUnique({
-            where: { id }
+            where: { id },
         });
         if (!node) {
             res.status(404).json({ error: 'Node not found' });
             return;
         }
         res.json(node);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+app.get('/nodes/:id/comments', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const comments = await prisma.comment.findMany({
+            where: { nodeId: id },
+            orderBy: { createdAt: 'asc' },
+        });
+        res.json(comments);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+app.post('/nodes/:id/comments', async (req, res) => {
+    const { id } = req.params;
+    const { text, authorName } = req.body as { text?: string; authorName?: string };
+
+    if (!text || typeof text !== 'string' || !text.trim()) {
+        res.status(400).json({ error: 'text is required' });
+        return;
+    }
+
+    try {
+        const node = await prisma.node.findUnique({ where: { id } });
+        if (!node) {
+            res.status(404).json({ error: 'Node not found' });
+            return;
+        }
+
+        const comment = await prisma.comment.create({
+            data: {
+                nodeId: id,
+                text: text.trim(),
+                authorName: typeof authorName === 'string' && authorName.trim()
+                    ? authorName.trim().slice(0, 80)
+                    : 'Guest',
+            },
+        });
+        res.status(201).json(comment);
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Internal server error' });

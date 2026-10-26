@@ -1,41 +1,48 @@
-import { GraphData, Node } from '../types';
+import { GraphData, Node, Comment } from '../types';
+import { getApiBase } from './config';
 
-const API_URL = 'http://localhost:3001';
+async function apiFetch(path: string, init?: RequestInit) {
+    const res = await fetch(`${getApiBase()}${path}`, init);
+    return res;
+}
 
 export async function searchNodes(query: string): Promise<GraphData> {
-    // Mock response for now if API fails or is not ready
-    try {
-        const res = await fetch(`${API_URL}/search?q=${encodeURIComponent(query)}`);
-        if (!res.ok) throw new Error('Failed to fetch');
-        return res.json();
-    } catch (e) {
-        console.warn('API fetch failed, returning mock data', e);
-        return {
-            nodes: [
-                {
-                    id: '1',
-                    title: 'Home',
-                    category: 'GENERAL',
-                    aiSummary: 'Root node',
-                    steps: [],
-                    difficulty: 1,
-                    timeEstimate: '',
-                    costEstimate: '',
-                    tools: [],
-                    materials: [],
-                    commonMistakes: [],
-                    createdAt: '',
-                    updatedAt: ''
-                } as any
-            ],
-            edges: [],
-            path: ['1']
-        };
+    const res = await apiFetch(`/search?q=${encodeURIComponent(query)}`);
+    if (res.status === 404) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || 'No stored answer for this question yet');
     }
+    if (!res.ok) {
+        throw new Error('Search failed. Is the API running?');
+    }
+    return res.json();
 }
 
 export async function getNode(id: string): Promise<Node> {
-    const res = await fetch(`${API_URL}/nodes/${id}`);
-    if (!res.ok) throw new Error('Failed to fetch');
+    const res = await apiFetch(`/nodes/${id}`);
+    if (!res.ok) throw new Error('Failed to fetch node');
+    return res.json();
+}
+
+export async function getComments(nodeId: string): Promise<Comment[]> {
+    const res = await apiFetch(`/nodes/${nodeId}/comments`);
+    if (!res.ok) throw new Error('Failed to load comments');
+    return res.json();
+}
+
+export async function postComment(
+    nodeId: string,
+    text: string,
+    authorName?: string
+): Promise<Comment> {
+    const res = await apiFetch(`/nodes/${nodeId}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, authorName }),
+    });
+    if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || 'Failed to post comment');
+    }
     return res.json();
 }

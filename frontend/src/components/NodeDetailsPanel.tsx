@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { Node } from '../types';
+import React, { useEffect, useState } from 'react';
+import { Node, Comment } from '../types';
+import { getComments, postComment } from '../api/client';
 
 interface Props {
     node: Node;
@@ -8,6 +9,52 @@ interface Props {
 
 export function NodeDetailsPanel({ node, onClose }: Props) {
     const [activeTab, setActiveTab] = useState<'Answer' | 'Comments' | 'Videos' | 'Tools'>('Answer');
+    const [comments, setComments] = useState<Comment[]>([]);
+    const [commentsLoading, setCommentsLoading] = useState(false);
+    const [commentText, setCommentText] = useState('');
+    const [authorName, setAuthorName] = useState('');
+    const [posting, setPosting] = useState(false);
+    const [commentError, setCommentError] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (activeTab !== 'Comments') return;
+
+        let cancelled = false;
+        setCommentsLoading(true);
+        setCommentError(null);
+        getComments(node.id)
+            .then((data) => {
+                if (!cancelled) setComments(data);
+            })
+            .catch((e) => {
+                if (!cancelled) {
+                    setCommentError(e instanceof Error ? e.message : 'Could not load comments');
+                }
+            })
+            .finally(() => {
+                if (!cancelled) setCommentsLoading(false);
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [activeTab, node.id]);
+
+    const handlePostComment = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!commentText.trim()) return;
+        setPosting(true);
+        setCommentError(null);
+        try {
+            const created = await postComment(node.id, commentText, authorName || undefined);
+            setComments((prev) => [...prev, created]);
+            setCommentText('');
+        } catch (err) {
+            setCommentError(err instanceof Error ? err.message : 'Could not post comment');
+        } finally {
+            setPosting(false);
+        }
+    };
 
     return (
         <div className="fixed right-0 top-0 h-full w-full md:w-[480px] bg-surface border-l border-gray-700 shadow-2xl z-50 flex flex-col animate-slide-in">
@@ -24,7 +71,7 @@ export function NodeDetailsPanel({ node, onClose }: Props) {
                 {['Answer', 'Comments', 'Videos', 'Tools'].map((tab) => (
                     <button
                         key={tab}
-                        onClick={() => setActiveTab(tab as any)}
+                        onClick={() => setActiveTab(tab as typeof activeTab)}
                         className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === tab
                                 ? 'bg-primary text-white'
                                 : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
@@ -88,8 +135,54 @@ export function NodeDetailsPanel({ node, onClose }: Props) {
                 )}
 
                 {activeTab === 'Comments' && (
-                    <div className="text-center text-gray-500 py-10">
-                        No comments yet.
+                    <div className="space-y-4">
+                        <p className="text-sm text-gray-400">
+                            Discuss whether this stored answer is right. Everyone searching the same question sees this thread.
+                        </p>
+
+                        {commentsLoading && (
+                            <p className="text-gray-500 text-sm">Loading comments…</p>
+                        )}
+
+                        {commentError && (
+                            <p className="text-red-400 text-sm">{commentError}</p>
+                        )}
+
+                        <div className="space-y-3">
+                            {comments.map((c) => (
+                                <div key={c.id} className="bg-gray-800/60 rounded-lg p-3 border border-gray-700">
+                                    <div className="text-xs text-gray-500 mb-1">{c.authorName}</div>
+                                    <p className="text-gray-200 text-sm whitespace-pre-wrap">{c.text}</p>
+                                </div>
+                            ))}
+                            {!commentsLoading && comments.length === 0 && !commentError && (
+                                <p className="text-gray-500 text-sm">No comments yet. Start the discussion.</p>
+                            )}
+                        </div>
+
+                        <form onSubmit={handlePostComment} className="space-y-2 pt-2 border-t border-gray-700">
+                            <input
+                                type="text"
+                                value={authorName}
+                                onChange={(e) => setAuthorName(e.target.value)}
+                                placeholder="Your name (optional)"
+                                className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white"
+                            />
+                            <textarea
+                                value={commentText}
+                                onChange={(e) => setCommentText(e.target.value)}
+                                placeholder="Is this the right answer?"
+                                rows={3}
+                                className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white"
+                            />
+                            <button
+                                type="submit"
+                                disabled={posting || !commentText.trim()}
+                                className="bg-primary text-white text-sm px-4 py-2 rounded-lg disabled:opacity-50"
+                            >
+                                {posting ? 'Posting…' : 'Post comment'}
+                            </button>
+                        </form>
                     </div>
                 )}
 

@@ -46,9 +46,21 @@ model Node {
   comments      Comment[]
   videos        Video[]
   journeySteps  JourneyStep[]
+  searchTopics  SearchTopic[]
 
   @@index([title])
   @@index([category])
+}
+
+model SearchTopic {
+  id              String   @id @default(uuid())
+  normalizedQuery String   @unique
+  primaryNodeId   String
+  createdAt       DateTime @default(now())
+
+  primaryNode Node @relation(fields: [primaryNodeId], references: [id], onDelete: Cascade)
+
+  @@index([primaryNodeId])
 }
 
 model Edge {
@@ -64,11 +76,12 @@ model Edge {
 }
 
 model Comment {
-  id        String   @id @default(uuid())
-  nodeId    String
-  userId    String?
-  text      String
-  createdAt DateTime @default(now())
+  id          String   @id @default(uuid())
+  nodeId      String
+  userId      String?
+  authorName  String   @default("Guest")
+  text        String
+  createdAt   DateTime @default(now())
 
   node Node  @relation(fields: [nodeId], references: [id], onDelete: Cascade)
   user User? @relation(fields: [userId], references: [id])

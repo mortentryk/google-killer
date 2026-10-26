@@ -35,4 +35,15 @@ export interface GraphData {
     nodes: Node[];
     edges: Edge[];
     path: string[]; // List of Node IDs in the path
+    cached?: boolean;
+    normalizedQuery?: string;
+}
+
+export interface Comment {
+    id: string;
+    nodeId: string;
+    userId?: string | null;
+    authorName: string;
+    text: string;
+    createdAt: string;
 }
