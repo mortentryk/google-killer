@@ -6,10 +6,12 @@ import HolesFeedPage from './pages/HolesFeedPage';
 import SearchesPage from './pages/SearchesPage';
 import TopicPage from './pages/TopicPage';
 import { RabbitHoleProvider } from './hooks/useRabbitHole';
+import { ApiStatusBanner } from './components/ApiStatusBanner';
 
 export default function App() {
     return (
         <BrowserRouter>
+            <ApiStatusBanner />
             <RabbitHoleProvider>
                 <Routes>
                     <Route path="/" element={<HomePage />} />

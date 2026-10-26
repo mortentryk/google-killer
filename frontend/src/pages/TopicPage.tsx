@@ -108,14 +108,18 @@ export default function TopicPage() {
                 });
             }
             if (data.slug) {
+                setGraphData(null);
+                setLoading(true);
+                setView('map');
+                setMapMode('walk');
                 navigate(`/q/${encodeURIComponent(data.slug)}?hole=1`);
+                return;
             }
-            else setError('Missing topic link from server');
+            setError('Missing topic link from server');
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Search failed');
-        } finally {
-            setLoading(false);
         }
+        setLoading(false);
     };
 
     if (!slug) {
@@ -135,7 +139,7 @@ export default function TopicPage() {
                 cached={graphData?.cached}
             />
 
-            <RabbitHoleTrail />
+            {view === 'answer' && <RabbitHoleTrail />}
 
             {error && (
                 <p className="text-center text-sm text-[#d93025] py-3 px-4 bg-white border-b border-[#ebebeb]">
@@ -181,6 +185,7 @@ export default function TopicPage() {
                                     if (node.id === graphData.primaryNodeId) return;
                                 }}
                                 onOpenNewTopic={(q) => void runSearch(q, 'trail')}
+                                onShowAnswer={() => setView('answer')}
                             />
                         </div>
                     </div>

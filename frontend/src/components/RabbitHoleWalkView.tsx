@@ -7,9 +7,16 @@ interface Props {
     displayQuery: string;
     onFollowBranch: (node: Node) => void;
     onOpenNewTopic: (query: string) => void;
+    onShowAnswer?: () => void;
 }
 
-export function RabbitHoleWalkView({ data, displayQuery, onFollowBranch, onOpenNewTopic }: Props) {
+export function RabbitHoleWalkView({
+    data,
+    displayQuery,
+    onFollowBranch,
+    onOpenNewTopic,
+    onShowAnswer,
+}: Props) {
     const approachChain = useMemo(() => buildApproachChain(data), [data]);
     const [extraSteps, setExtraSteps] = useState<Node[]>([]);
     const [stepIndex, setStepIndex] = useState(0);
@@ -30,8 +37,8 @@ export function RabbitHoleWalkView({ data, displayQuery, onFollowBranch, onOpenN
         if (!current || !finishedApproach || !atEndOfPath) return [];
         const branch = getNextBranchChoices(current.id, data, visitedIds);
         if (branch.length > 0) return branch;
-        return getFallbackExploreChoices(current.id, data, visitedIds);
-    }, [current, finishedApproach, atEndOfPath, data, visitedIds]);
+        return getFallbackExploreChoices(current.id, data);
+    }, [current, finishedApproach, atEndOfPath, data]);
 
     const goDeeper = () => {
         if (stepIndex < approachChain.length - 1) {
@@ -116,11 +123,22 @@ export function RabbitHoleWalkView({ data, displayQuery, onFollowBranch, onOpenN
                             Continue deeper →
                         </button>
                     )}
+
+                    {approachChain.length === 1 && atPrimary && onShowAnswer && (
+                        <button
+                            type="button"
+                            onClick={onShowAnswer}
+                            className="mt-6 w-full sm:w-auto text-sm font-medium border border-[#dadce0] bg-white text-[#1a73e8] px-5 py-2.5 rounded-md hover:bg-[#f1f8ff]"
+                        >
+                            Open full answer & discussion →
+                        </button>
+                    )}
                 </article>
 
                 {finishedApproach && atEndOfPath && nextChoices.length > 0 && (
                     <section>
                         <h4 className="text-sm font-medium text-[#202124] mb-3">What comes next?</h4>
+                        <p className="text-xs text-[#70757a] mb-3">Step to another part of this map, or open a new shared question.</p>
                         <div className="grid gap-2 sm:grid-cols-2">
                             {nextChoices.map((node) => (
                                 <button
