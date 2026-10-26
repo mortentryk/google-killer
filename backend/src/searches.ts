@@ -19,6 +19,44 @@ export interface LatestSearch {
     searchedAt: string;
 }
 
+export interface LatestSearchFeedItem extends LatestSearch {
+    displayQuery: string;
+    niche: string;
+    rabbitHoleTitle: string | null;
+    commentCount: number;
+}
+
+const SMALL_WORDS = new Set(['a', 'an', 'the', 'and', 'or', 'for', 'to', 'in', 'on', 'at', 'of', 'my']);
+
+export function cleanSearchForDisplay(raw: string): string {
+    const normalized = normalizeSearchQuery(raw);
+    if (!normalized) return raw.trim();
+
+    let text = normalized
+        .replace(/^(how do i|how can i|how to|what is|why is|why does|help with|need help with|fix my|fix a|fix the|fix)\s+/i, '')
+        .replace(/\?+$/, '')
+        .trim();
+
+    if (!text) text = normalized;
+
+    return text
+        .split(' ')
+        .map((word, index) => {
+            const lower = word.toLocaleLowerCase();
+            if (index > 0 && SMALL_WORDS.has(lower)) return lower;
+            return lower.charAt(0).toLocaleUpperCase() + lower.slice(1);
+        })
+        .join(' ');
+}
+
+export function formatNiche(category: string | null | undefined): string {
+    if (!category) return 'General';
+    return category
+        .split('_')
+        .map((part) => part.charAt(0) + part.slice(1).toLocaleLowerCase())
+        .join(' ');
+}
+
 export function toLatestSearches(
     rows: SearchRow[],
     limit = LATEST_SEARCH_LIMIT

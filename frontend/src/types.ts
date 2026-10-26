@@ -42,6 +42,13 @@ export interface LatestSearch {
     searchedAt: string;
 }
 
+export interface LatestSearchFeedItem extends LatestSearch {
+    displayQuery: string;
+    niche: string;
+    rabbitHoleTitle: string | null;
+    commentCount: number;
+}
+
 export interface AiAnswer {
     title: string;
     summary: string;

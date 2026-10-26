@@ -7,9 +7,10 @@ interface Props {
     node: Node | null;
     onShowBest: () => void;
     onClose: () => void;
+    subtitle?: string;
 }
 
-export function SearchThreadPanel({ query, node, onShowBest, onClose }: Props) {
+export function SearchThreadPanel({ query, node, onShowBest, onClose, subtitle }: Props) {
     const [thread, setThread] = useState<SearchThread | null>(null);
     const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
     const [authorName, setAuthorName] = useState('');
@@ -66,9 +67,12 @@ export function SearchThreadPanel({ query, node, onShowBest, onClose }: Props) {
 
     return (
         <div className="fixed right-0 top-0 h-full w-full md:w-[480px] bg-surface border-l border-gray-700 shadow-2xl z-50 flex flex-col">
-            <div className="p-4 border-b border-gray-700 flex justify-between items-center gap-3">
-                <h2 className="text-xl font-bold text-white truncate">{query}</h2>
-                <button type="button" onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-white">
+            <div className="p-4 border-b border-gray-700 flex justify-between items-start gap-3">
+                <div className="min-w-0">
+                    <h2 className="text-xl font-bold text-white truncate">{query}</h2>
+                    {subtitle && <p className="text-xs text-textSecondary mt-1">{subtitle}</p>}
+                </div>
+                <button type="button" onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-white shrink-0">
                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>

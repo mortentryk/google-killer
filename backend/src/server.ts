@@ -3,9 +3,12 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import prisma from './db/client';
 import {
+    LATEST_SEARCH_LIMIT,
     LATEST_SEARCH_SCAN,
     commentAuthor,
     commentText,
+    cleanSearchForDisplay,
+    formatNiche,
     normalizeSearchQuery,
     pickBestAnswer,
     queryKey,
@@ -106,7 +109,36 @@ app.get('/searches', async (_req, res) => {
             select: { query: true, createdAt: true },
         });
 
-        res.json({ searches: toLatestSearches(recent) });
+        const latest = toLatestSearches(recent, LATEST_SEARCH_LIMIT);
+        const keys = latest.map((item) => queryKey(item.query));
+        const threads = keys.length
+            ? await prisma.searchThread.findMany({
+                where: { queryKey: { in: keys } },
+                include: { _count: { select: { comments: true } } },
+            })
+            : [];
+        const commentCounts = new Map(
+            threads.map((thread) => [thread.queryKey, thread._count.comments])
+        );
+
+        const searches = await Promise.all(
+            latest.map(async (item) => {
+                const { best } = await loadGraph(item.query);
+                const niche = formatNiche(best?.category ?? null);
+                const rabbitHoleTitle = best?.title ?? null;
+                const displayQuery = cleanSearchForDisplay(item.query);
+
+                return {
+                    ...item,
+                    displayQuery,
+                    niche,
+                    rabbitHoleTitle,
+                    commentCount: commentCounts.get(queryKey(item.query)) ?? 0,
+                };
+            })
+        );
+
+        res.json({ searches });
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Internal server error' });

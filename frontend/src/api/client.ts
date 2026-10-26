@@ -1,4 +1,4 @@
-import { GraphData, LatestSearch, Node, SearchComment, SearchThread } from '../types';
+import { GraphData, LatestSearchFeedItem, Node, SearchComment, SearchThread } from '../types';
 
 const API_URL = 'http://localhost:3001';
 
@@ -34,10 +34,10 @@ export async function searchNodes(query: string): Promise<GraphData> {
     }
 }
 
-export async function getLatestSearches(): Promise<LatestSearch[]> {
+export async function getLatestSearches(): Promise<LatestSearchFeedItem[]> {
     const res = await fetch(`${API_URL}/searches`);
     if (!res.ok) throw new Error('Failed to fetch latest searches');
-    const data: { searches: LatestSearch[] } = await res.json();
+    const data: { searches: LatestSearchFeedItem[] } = await res.json();
     return data.searches ?? [];
 }
 
