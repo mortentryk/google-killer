@@ -1,4 +1,4 @@
-import { GraphData, Node, Comment, WebLink } from '../types';
+import { GraphData, Node, Comment, WebLink, RecentSearch } from '../types';
 import { getApiBase } from './config';
 import { parseGraphPayload, parseNode } from '../utils/parseNode';
 import { errorFromBody, readJsonBody } from './http';
@@ -14,6 +14,18 @@ async function parseGraphResponse(res: Response): Promise<GraphData> {
         throw new Error(errorFromBody(body, 'Request failed'));
     }
     return parseGraphPayload(body as Record<string, unknown>);
+}
+
+export async function getRecentSearches(limit = 12): Promise<RecentSearch[]> {
+    const res = await apiFetch(`/searches/recent?limit=${limit}`);
+    const body = await readJsonBody(res);
+    if (!res.ok) {
+        throw new Error(errorFromBody(body, 'Failed to load recent searches'));
+    }
+    if (!Array.isArray(body)) {
+        throw new Error('Failed to load recent searches');
+    }
+    return body as RecentSearch[];
 }
 
 export async function searchNodes(query: string): Promise<GraphData> {

@@ -54,6 +54,13 @@ export interface Comment {
     createdAt: string;
 }
 
+export interface RecentSearch {
+    id: string;
+    displayQuery: string;
+    slug: string;
+    createdAt: string;
+}
+
 export interface WebLink {
     id: string;
     nodeId: string;

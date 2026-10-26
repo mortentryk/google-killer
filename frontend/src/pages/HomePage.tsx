@@ -1,15 +1,33 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { HomeLanding } from '../components/HomeLanding';
-import { searchNodes } from '../api/client';
+import { getRecentSearches, searchNodes } from '../api/client';
 import { useSearchHistory } from '../hooks/useSearchHistory';
+import { RecentSearch } from '../types';
 
 export default function HomePage() {
     const [query, setQuery] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [recentSearches, setRecentSearches] = useState<RecentSearch[]>([]);
+    const [recentLoading, setRecentLoading] = useState(true);
     const navigate = useNavigate();
     const { history, push } = useSearchHistory();
+
+    const loadRecent = useCallback(async () => {
+        setRecentLoading(true);
+        try {
+            setRecentSearches(await getRecentSearches(12));
+        } catch {
+            setRecentSearches([]);
+        } finally {
+            setRecentLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        void loadRecent();
+    }, [loadRecent]);
 
     const onSearch = async (raw: string) => {
         const trimmed = raw.trim();
@@ -48,7 +66,10 @@ export default function HomePage() {
                 query={query}
                 onQueryChange={setQuery}
                 onSearch={onSearch}
+                onOpenTopic={(slug) => navigate(`/q/${slug}`)}
                 history={history}
+                recentSearches={recentSearches}
+                recentLoading={recentLoading}
             />
         </>
     );

@@ -1,6 +1,8 @@
 import React from 'react';
 import { Logo } from './Logo';
 import { SearchBar } from './SearchBar';
+import { RecentSearch } from '../types';
+import { formatRelativeTime } from '../utils/formatRelativeTime';
 
 const SAMPLES = [
     'fix leaking radiator',
@@ -14,10 +16,21 @@ interface Props {
     query: string;
     onQueryChange: (q: string) => void;
     onSearch: (q: string) => void;
+    onOpenTopic: (slug: string) => void;
     history: string[];
+    recentSearches: RecentSearch[];
+    recentLoading?: boolean;
 }
 
-export function HomeLanding({ query, onQueryChange, onSearch, history }: Props) {
+export function HomeLanding({
+    query,
+    onQueryChange,
+    onSearch,
+    onOpenTopic,
+    history,
+    recentSearches,
+    recentLoading,
+}: Props) {
     const lucky = () => {
         const pick = SAMPLES[Math.floor(Math.random() * SAMPLES.length)];
         onQueryChange(pick);
@@ -31,7 +44,7 @@ export function HomeLanding({ query, onQueryChange, onSearch, history }: Props) 
                 <span className="hover:underline cursor-default">Side trails</span>
             </header>
 
-            <main className="flex-1 flex flex-col items-center justify-center px-4 pb-32 -mt-16">
+            <main className="flex-1 flex flex-col items-center justify-center px-4 pb-16 -mt-12">
                 <div className="mb-3">
                     <Logo size="hero" />
                 </div>
@@ -64,11 +77,68 @@ export function HomeLanding({ query, onQueryChange, onSearch, history }: Props) 
                     </button>
                 </div>
 
-                {(history.length > 0 || SAMPLES.length > 0) && (
-                    <div className="mt-12 w-full max-w-xl text-center">
+                <div className="mt-12 w-full max-w-lg">
+                    <p className="text-xs text-[#70757a] uppercase tracking-wide mb-3 text-center">
+                        Latest searches
+                    </p>
+                    <div className="rounded-lg border border-[#ebebeb] bg-[#f8f9fa] overflow-hidden">
+                        {recentLoading && recentSearches.length === 0 && (
+                            <p className="text-sm text-[#70757a] py-6 text-center">Loading what people searched…</p>
+                        )}
+                        {!recentLoading && recentSearches.length === 0 && (
+                            <p className="text-sm text-[#70757a] py-6 px-4 text-center">
+                                No searches yet — be the first to go down the hole.
+                            </p>
+                        )}
+                        {recentSearches.length > 0 && (
+                            <ul className="divide-y divide-[#ebebeb] bg-white">
+                                {recentSearches.map((item) => (
+                                    <li key={item.id}>
+                                        <button
+                                            type="button"
+                                            onClick={() => onOpenTopic(item.slug)}
+                                            className="w-full text-left px-4 py-3 hover:bg-[#f1f3f4] flex items-baseline justify-between gap-3 group"
+                                        >
+                                            <span className="text-sm text-[#1a0dab] group-hover:underline truncate">
+                                                {item.displayQuery}
+                                            </span>
+                                            <span className="text-xs text-[#70757a] shrink-0">
+                                                {formatRelativeTime(item.createdAt)}
+                                            </span>
+                                        </button>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </div>
+                </div>
+
+                {history.length > 0 && (
+                    <div className="mt-8 w-full max-w-lg text-center">
+                        <p className="text-xs text-[#70757a] uppercase tracking-wide mb-3">Your recent searches</p>
+                        <div className="flex flex-wrap justify-center gap-2">
+                            {history.slice(0, 6).map((item) => (
+                                <button
+                                    key={item}
+                                    type="button"
+                                    onClick={() => {
+                                        onQueryChange(item);
+                                        onSearch(item);
+                                    }}
+                                    className="text-sm text-[#1a0dab] hover:underline px-2 py-1"
+                                >
+                                    {item}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {history.length === 0 && (
+                    <div className="mt-8 w-full max-w-lg text-center">
                         <p className="text-xs text-[#70757a] uppercase tracking-wide mb-3">Try a search</p>
                         <div className="flex flex-wrap justify-center gap-2">
-                            {(history.length > 0 ? history : SAMPLES).slice(0, 6).map((item) => (
+                            {SAMPLES.slice(0, 5).map((item) => (
                                 <button
                                     key={item}
                                     type="button"

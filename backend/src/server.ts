@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import prisma from './db/client';
 import { resolveSearch, resolveTopicBySlug } from './search/resolveSearch';
+import { listRecentSearches, recordSearchEvent } from './search/recentSearches';
 import { rateLimit } from './middleware/rateLimit';
 import { commentSpamGuard } from './middleware/commentSpam';
 import { linkSpamGuard } from './middleware/linkSpam';
@@ -17,6 +18,7 @@ app.use(cors());
 app.use(express.json({ limit: '32kb' }));
 
 const searchLimiter = rateLimit({ prefix: 'search', windowMs: 60_000, max: 40 });
+const recentSearchesLimiter = rateLimit({ prefix: 'searches-recent', windowMs: 60_000, max: 60 });
 const commentReadLimiter = rateLimit({ prefix: 'comments-read', windowMs: 60_000, max: 120 });
 const commentWriteLimiter = rateLimit({ prefix: 'comments-write', windowMs: 15 * 60_000, max: 20 });
 const linkWriteLimiter = rateLimit({ prefix: 'links-write', windowMs: 15 * 60_000, max: 15 });
@@ -47,12 +49,32 @@ app.get('/search', searchLimiter, async (req, res) => {
             res.status(400).json({ error: 'Enter a search query' });
             return;
         }
+        void recordSearchEvent(result.displayQuery, result.slug).catch((err) => console.error(err));
         res.json(result);
     } catch (error) {
         console.error(error);
         const message = error instanceof Error ? error.message : 'Internal server error';
         const status = message === 'Query is too long' ? 400 : 500;
         res.status(status).json({ error: message });
+    }
+});
+
+app.get('/searches/recent', recentSearchesLimiter, async (req, res) => {
+    const rawLimit = req.query.limit;
+    const limit = typeof rawLimit === 'string' ? Number.parseInt(rawLimit, 10) : 12;
+    try {
+        const rows = await listRecentSearches(Number.isFinite(limit) ? limit : 12);
+        res.json(
+            rows.map((row) => ({
+                id: row.id,
+                displayQuery: row.displayQuery,
+                slug: row.slug,
+                createdAt: row.createdAt.toISOString(),
+            }))
+        );
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Internal server error' });
     }
 });
 

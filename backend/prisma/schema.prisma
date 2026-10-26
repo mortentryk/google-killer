@@ -66,6 +66,15 @@ model SearchTopic {
   @@index([primaryNodeId])
 }
 
+model SearchEvent {
+  id           String   @id @default(uuid())
+  displayQuery String
+  slug         String
+  createdAt    DateTime @default(now())
+
+  @@index([createdAt(sort: Desc)])
+}
+
 model Edge {
   id           String       @id @default(uuid())
   fromNodeId   String
