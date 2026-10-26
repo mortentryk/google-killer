@@ -5,9 +5,10 @@ import { getComments, postComment } from '../api/client';
 interface Props {
     nodeId: string;
     nodeTitle: string;
+    embedded?: boolean;
 }
 
-export function DiscussionView({ nodeId, nodeTitle }: Props) {
+export function DiscussionView({ nodeId, nodeTitle, embedded }: Props) {
     const [comments, setComments] = useState<Comment[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -50,10 +51,10 @@ export function DiscussionView({ nodeId, nodeTitle }: Props) {
     };
 
     return (
-        <div className="max-w-2xl mx-auto px-4 py-6">
+        <div className={embedded ? 'px-5 py-6 h-full' : 'max-w-2xl mx-auto px-4 py-6'}>
             <h2 className="text-lg text-[#202124] font-normal mb-1">Discussion</h2>
             <p className="text-sm text-[#70757a] mb-4">
-                Is the shared answer for “{nodeTitle}” right? Everyone on this topic sees this thread.
+                Is this answer right? Everyone on this topic sees this thread.
             </p>
 
             {loading && <p className="text-sm text-[#70757a]">Loading…</p>}

@@ -7,14 +7,15 @@ interface Props {
     slug: string;
     cached?: boolean;
     generated?: boolean;
+    embedded?: boolean;
 }
 
-export function AnswerView({ node, displayQuery, slug, cached, generated }: Props) {
+export function AnswerView({ node, displayQuery, slug, cached, generated, embedded }: Props) {
     const shareUrl =
         typeof window !== 'undefined' ? `${window.location.origin}/q/${slug}` : `/q/${slug}`;
 
     return (
-        <div className="max-w-3xl mx-auto px-4 py-6">
+        <div className={embedded ? 'px-5 py-6 max-w-3xl' : 'max-w-3xl mx-auto px-4 py-6'}>
             <p className="text-xs text-[#70757a] mb-1">
                 Shared AI answer
                 {cached ? ' · saved for everyone' : generated ? ' · generated once' : ''}

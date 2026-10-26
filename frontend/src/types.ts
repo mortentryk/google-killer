@@ -31,7 +31,7 @@ export interface Edge {
     relationType: string;
 }
 
-export type ResultView = 'answer' | 'map' | 'discussion';
+export type ResultView = 'answer' | 'map';
 
 export interface GraphData {
     nodes: Node[];

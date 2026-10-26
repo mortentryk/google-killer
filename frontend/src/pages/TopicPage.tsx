@@ -3,8 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ResultsHeader } from '../components/ResultsHeader';
 import { GraphView } from '../components/GraphView';
 import { NodeDetailsPanel } from '../components/NodeDetailsPanel';
-import { AnswerView } from '../components/AnswerView';
-import { DiscussionView } from '../components/DiscussionView';
+import { AnswerDiscussionPanel } from '../components/AnswerDiscussionPanel';
 import { getTopicBySlug, searchNodes } from '../api/client';
 import { GraphData, Node, ResultView } from '../types';
 import { useSearchHistory } from '../hooks/useSearchHistory';
@@ -87,7 +86,7 @@ export default function TopicPage() {
                 </p>
             )}
 
-            <div className="flex-1 min-h-0 relative overflow-y-auto">
+            <div className="flex-1 min-h-0 relative overflow-hidden flex flex-col">
                 {loading && (
                     <div className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-white/80">
                         <div className="w-10 h-10 border-2 border-[#4285F4] border-t-transparent rounded-full animate-spin" />
@@ -96,17 +95,13 @@ export default function TopicPage() {
                 )}
 
                 {!loading && graphData && view === 'answer' && primaryNode && graphData.slug && (
-                    <AnswerView
+                    <AnswerDiscussionPanel
                         node={primaryNode}
                         displayQuery={graphData.displayQuery || query}
                         slug={graphData.slug}
                         cached={graphData.cached}
                         generated={graphData.generated}
                     />
-                )}
-
-                {!loading && graphData && view === 'discussion' && primaryNode && (
-                    <DiscussionView nodeId={primaryNode.id} nodeTitle={primaryNode.title} />
                 )}
 
                 {!loading && graphData && view === 'map' && (
