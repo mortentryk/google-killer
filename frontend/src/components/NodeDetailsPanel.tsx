@@ -4,9 +4,10 @@ import { Node } from '../types';
 interface Props {
     node: Node;
     onClose: () => void;
+    onFollowTrail?: (query: string) => void;
 }
 
-export function NodeDetailsPanel({ node, onClose }: Props) {
+export function NodeDetailsPanel({ node, onClose, onFollowTrail }: Props) {
     const [activeTab, setActiveTab] = useState<'Answer' | 'Tools'>('Answer');
 
     return (
@@ -38,6 +39,21 @@ export function NodeDetailsPanel({ node, onClose }: Props) {
                     </button>
                 ))}
             </div>
+
+            {onFollowTrail && (
+                <div className="px-4 py-3 border-b border-[#ebebeb] bg-[#f8f9fa]">
+                    <button
+                        type="button"
+                        onClick={() => onFollowTrail(node.title)}
+                        className="w-full text-sm font-medium text-white bg-[#1a73e8] hover:bg-[#1765cc] rounded-md py-2.5 px-4 shadow-sm"
+                    >
+                        Follow this trail →
+                    </button>
+                    <p className="text-xs text-[#70757a] mt-2 text-center">
+                        Open this as its own question and keep going down the hole.
+                    </p>
+                </div>
+            )}
 
             <div className="flex-1 overflow-y-auto p-5">
                 {activeTab === 'Answer' && (

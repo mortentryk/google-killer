@@ -124,7 +124,14 @@ export default function TopicPage() {
             </div>
 
             {selectedNode && view === 'map' && (
-                <NodeDetailsPanel node={selectedNode} onClose={() => setSelectedNode(null)} />
+                <NodeDetailsPanel
+                    node={selectedNode}
+                    onClose={() => setSelectedNode(null)}
+                    onFollowTrail={(trailQuery) => {
+                        setSelectedNode(null);
+                        void runSearch(trailQuery);
+                    }}
+                />
             )}
         </div>
     );

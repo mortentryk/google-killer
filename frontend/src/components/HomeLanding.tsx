@@ -2,7 +2,13 @@ import React from 'react';
 import { Logo } from './Logo';
 import { SearchBar } from './SearchBar';
 
-const SAMPLES = ['fix leaking radiator', 'plumbing', 'radiator', 'home repair'];
+const SAMPLES = [
+    'fix leaking radiator',
+    'how to bleed a radiator',
+    'plumbing basics',
+    'when to call a plumber',
+    'home heating not working',
+];
 
 interface Props {
     query: string;
