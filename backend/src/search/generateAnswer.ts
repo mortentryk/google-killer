@@ -85,8 +85,14 @@ async function generateWithOpenAI(rawQuery: string): Promise<GeneratedAnswer> {
     if (!apiKey) return fallbackAnswer(rawQuery);
 
     const model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 25_000);
+
+    let res: Response;
+    try {
+        res = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
+        signal: controller.signal,
         headers: {
             Authorization: `Bearer ${apiKey}`,
             'Content-Type': 'application/json',
@@ -105,6 +111,12 @@ async function generateWithOpenAI(rawQuery: string): Promise<GeneratedAnswer> {
             ],
         }),
     });
+    } catch (error) {
+        console.error('OpenAI request failed', error);
+        return fallbackAnswer(rawQuery);
+    } finally {
+        clearTimeout(timeout);
+    }
 
     if (!res.ok) {
         console.error('OpenAI error', await res.text());
@@ -149,12 +161,26 @@ async function linkRelatedNodes(primaryNodeId: string, relatedTitles: string[]) 
     }
 }
 
-export async function createTopicFromGeneration(
-    rawQuery: string,
-    normalizedQuery: string,
-    slug: string
-): Promise<string> {
+const LIMITS = {
+    title: 200,
+    aiSummary: 4000,
+    step: 500,
+    listItem: 200,
+};
+
+function clampStrings(items: string[], maxLen: number, maxItems: number): string[] {
+    return items.slice(0, maxItems).map((s) => s.slice(0, maxLen));
+}
+
+export async function createTopicFromGeneration(rawQuery: string): Promise<string> {
     const generated = await generateWithOpenAI(rawQuery);
+    generated.title = generated.title.slice(0, LIMITS.title);
+    generated.aiSummary = generated.aiSummary.slice(0, LIMITS.aiSummary);
+    generated.steps = clampStrings(generated.steps, LIMITS.step, 30);
+    generated.tools = clampStrings(generated.tools, LIMITS.listItem, 30);
+    generated.materials = clampStrings(generated.materials, LIMITS.listItem, 30);
+    generated.commonMistakes = clampStrings(generated.commonMistakes, LIMITS.listItem, 20);
+    generated.relatedTitles = clampStrings(generated.relatedTitles, LIMITS.title, 10);
 
     const primary = await prisma.node.create({
         data: {
@@ -193,15 +219,6 @@ export async function createTopicFromGeneration(
             update: {},
         });
     }
-
-    await prisma.searchTopic.create({
-        data: {
-            slug,
-            normalizedQuery,
-            displayQuery: rawQuery.trim(),
-            primaryNodeId: primary.id,
-        },
-    });
 
     return primary.id;
 }

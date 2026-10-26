@@ -16,6 +16,15 @@ app.get('/', (req, res) => {
     res.send('Antigravity API is running');
 });
 
+app.get('/health', async (_req, res) => {
+    try {
+        await prisma.$queryRaw`SELECT 1`;
+        res.json({ ok: true });
+    } catch {
+        res.status(503).json({ ok: false });
+    }
+});
+
 app.get('/search', async (req, res) => {
     const { q } = req.query;
     if (!q || typeof q !== 'string') {
@@ -32,7 +41,9 @@ app.get('/search', async (req, res) => {
         res.json(result);
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: 'Internal server error' });
+        const message = error instanceof Error ? error.message : 'Internal server error';
+        const status = message === 'Query is too long' ? 400 : 500;
+        res.status(status).json({ error: message });
     }
 });
 
@@ -101,7 +112,7 @@ app.post('/nodes/:id/comments', async (req, res) => {
         const comment = await prisma.comment.create({
             data: {
                 nodeId: id,
-                text: text.trim(),
+                text: text.trim().slice(0, 2000),
                 authorName: typeof authorName === 'string' && authorName.trim()
                     ? authorName.trim().slice(0, 80)
                     : 'Guest',

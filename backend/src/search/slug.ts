@@ -1,5 +1,3 @@
-import prisma from '../db/client';
-
 export function slugify(normalizedQuery: string): string {
     const base = normalizedQuery
         .slice(0, 80)
@@ -9,14 +7,6 @@ export function slugify(normalizedQuery: string): string {
     return base || 'topic';
 }
 
-export async function allocateSlug(normalizedQuery: string): Promise<string> {
-    let candidate = slugify(normalizedQuery);
-    let suffix = 0;
-
-    while (true) {
-        const slug = suffix === 0 ? candidate : `${candidate}-${suffix}`;
-        const taken = await prisma.searchTopic.findUnique({ where: { slug } });
-        if (!taken) return slug;
-        suffix += 1;
-    }
+export function slugWithSuffix(base: string, suffix: number): string {
+    return suffix === 0 ? base : `${base}-${suffix}`;
 }

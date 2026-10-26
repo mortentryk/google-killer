@@ -1,10 +1,12 @@
 import prisma from '../db/client';
 import { normalizeQuery, queryTokens } from './normalizeQuery';
 import { payloadForTopic } from './graph';
-import { allocateSlug } from './slug';
 import { createTopicFromGeneration } from './generateAnswer';
+import { persistTopic, aliasTopicToQuery } from './persistTopic';
+import { findSimilarTopic } from './similarQuery';
 
 const MIN_SEED_SCORE = 20;
+const MAX_QUERY_LENGTH = 500;
 
 function scoreNode(
     title: string,
@@ -49,50 +51,38 @@ async function pickPrimaryNodeId(normalized: string): Promise<string | null> {
     return bestScore >= MIN_SEED_SCORE ? bestId : null;
 }
 
-async function cacheSeedTopic(
-    rawQuery: string,
-    normalizedQuery: string,
-    primaryNodeId: string
-) {
-    const slug = await allocateSlug(normalizedQuery);
-    await prisma.searchTopic.create({
-        data: {
-            slug,
-            normalizedQuery,
-            displayQuery: rawQuery.trim(),
-            primaryNodeId,
-        },
-    });
-    return slug;
-}
-
 export async function resolveSearch(rawQuery: string) {
-    const normalizedQuery = normalizeQuery(rawQuery);
+    const trimmed = rawQuery.trim();
+    if (!trimmed) return null;
+    if (trimmed.length > MAX_QUERY_LENGTH) {
+        throw new Error('Query is too long');
+    }
+
+    const normalizedQuery = normalizeQuery(trimmed);
     if (!normalizedQuery) return null;
 
     const existing = await prisma.searchTopic.findUnique({
         where: { normalizedQuery },
     });
-
     if (existing) {
         return payloadForTopic(existing, { cached: true, generated: false });
     }
 
-    const seedNodeId = await pickPrimaryNodeId(normalizedQuery);
-    if (seedNodeId) {
-        await cacheSeedTopic(rawQuery, normalizedQuery, seedNodeId);
-        const topic = await prisma.searchTopic.findUniqueOrThrow({
-            where: { normalizedQuery },
-        });
-        return payloadForTopic(topic, { cached: false, generated: false });
+    const similar = await findSimilarTopic(normalizedQuery);
+    if (similar && similar.normalizedQuery !== normalizedQuery) {
+        return aliasTopicToQuery(similar, normalizedQuery, trimmed);
+    }
+    if (similar) {
+        return payloadForTopic(similar, { cached: true, generated: false });
     }
 
-    const slug = await allocateSlug(normalizedQuery);
-    const primaryNodeId = await createTopicFromGeneration(rawQuery, normalizedQuery, slug);
-    const topic = await prisma.searchTopic.findUniqueOrThrow({
-        where: { normalizedQuery },
-    });
-    return payloadForTopic(topic, { cached: false, generated: true });
+    const seedNodeId = await pickPrimaryNodeId(normalizedQuery);
+    if (seedNodeId) {
+        return persistTopic(trimmed, normalizedQuery, seedNodeId, { generated: false });
+    }
+
+    const primaryNodeId = await createTopicFromGeneration(trimmed);
+    return persistTopic(trimmed, normalizedQuery, primaryNodeId, { generated: true });
 }
 
 export async function resolveTopicBySlug(slug: string) {
