@@ -62,7 +62,7 @@ export default function HomePage() {
                 });
             }
             if (data.slug) {
-                navigate(`/q/${encodeURIComponent(data.slug)}?hole=1`);
+                navigate(`/q/${encodeURIComponent(data.slug)}?map=1`);
             } else {
                 setError('Missing topic link from server');
             }
@@ -92,7 +92,7 @@ export default function HomePage() {
                 onSearch={onSearch}
                 onOpenTopic={(slug, mode = 'discuss') =>
                     navigate(
-                        `/q/${encodeURIComponent(slug)}?${mode === 'hole' ? 'hole=1' : 'discuss=1'}`
+                        `/q/${encodeURIComponent(slug)}?${mode === 'map' ? 'map=1' : 'discuss=1'}`
                     )
                 }
                 history={history}

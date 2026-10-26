@@ -6,7 +6,7 @@ interface Props {
     items: RecentSearch[];
     loading?: boolean;
     emptyMessage?: string;
-    onOpenTopic: (slug: string, mode?: 'discuss' | 'hole') => void;
+    onOpenTopic: (slug: string, mode?: 'discuss' | 'map') => void;
 }
 
 export function RecentSearchesList({
