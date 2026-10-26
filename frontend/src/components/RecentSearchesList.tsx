@@ -6,7 +6,7 @@ interface Props {
     items: RecentSearch[];
     loading?: boolean;
     emptyMessage?: string;
-    onOpenTopic: (slug: string) => void;
+    onOpenTopic: (slug: string, mode?: 'discuss' | 'hole') => void;
 }
 
 export function RecentSearchesList({
@@ -29,7 +29,7 @@ export function RecentSearchesList({
                 <li key={item.id}>
                     <button
                         type="button"
-                        onClick={() => onOpenTopic(item.slug)}
+                        onClick={() => onOpenTopic(item.slug, 'discuss')}
                         className="w-full text-left px-4 py-3 hover:bg-[#f1f3f4] group sm:px-5 sm:py-4"
                     >
                         <div className="flex items-baseline justify-between gap-3">

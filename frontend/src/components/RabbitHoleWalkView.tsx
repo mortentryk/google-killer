@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { GraphData, Node } from '../types';
-import { buildApproachChain, getNextBranchChoices } from '../utils/rabbitPath';
+import { buildApproachChain, getFallbackExploreChoices, getNextBranchChoices } from '../utils/rabbitPath';
 
 interface Props {
     data: GraphData;
@@ -16,7 +16,9 @@ export function RabbitHoleWalkView({ data, displayQuery, onFollowBranch, onOpenN
 
     const path = useMemo(() => [...approachChain, ...extraSteps], [approachChain, extraSteps]);
     const current = path[stepIndex] ?? path[path.length - 1];
-    const atPrimary = current?.id === data.primaryNodeId && stepIndex >= approachChain.length - 1;
+    const finishedApproach = stepIndex >= approachChain.length - 1;
+    const atPrimary = current?.id === data.primaryNodeId && finishedApproach;
+    const atEndOfPath = stepIndex === path.length - 1;
     const visitedIds = useMemo(() => new Set(path.map((n) => n.id)), [path]);
 
     useEffect(() => {
@@ -24,7 +26,12 @@ export function RabbitHoleWalkView({ data, displayQuery, onFollowBranch, onOpenN
         setStepIndex(0);
     }, [data.slug, data.primaryNodeId]);
 
-    const nextChoices = current && atPrimary ? getNextBranchChoices(current.id, data, visitedIds) : [];
+    const nextChoices = useMemo(() => {
+        if (!current || !finishedApproach || !atEndOfPath) return [];
+        const branch = getNextBranchChoices(current.id, data, visitedIds);
+        if (branch.length > 0) return branch;
+        return getFallbackExploreChoices(current.id, data, visitedIds);
+    }, [current, finishedApproach, atEndOfPath, data, visitedIds]);
 
     const goDeeper = () => {
         if (stepIndex < approachChain.length - 1) {
@@ -92,7 +99,7 @@ export function RabbitHoleWalkView({ data, displayQuery, onFollowBranch, onOpenN
                     <h3 className="text-2xl font-normal text-[#202124] mb-3">{current.title}</h3>
                     <p className="text-sm text-[#4d5156] leading-relaxed">{current.aiSummary}</p>
 
-                    {current.steps?.length > 0 && atPrimary && (
+                    {current.steps?.length > 0 && atPrimary && stepIndex === path.length - 1 && (
                         <ol className="mt-4 list-decimal list-inside text-sm text-[#4d5156] space-y-1">
                             {current.steps.slice(0, 4).map((step, i) => (
                                 <li key={i}>{step}</li>
@@ -111,7 +118,7 @@ export function RabbitHoleWalkView({ data, displayQuery, onFollowBranch, onOpenN
                     )}
                 </article>
 
-                {atPrimary && nextChoices.length > 0 && (
+                {finishedApproach && atEndOfPath && nextChoices.length > 0 && (
                     <section>
                         <h4 className="text-sm font-medium text-[#202124] mb-3">What comes next?</h4>
                         <div className="grid gap-2 sm:grid-cols-2">
@@ -142,13 +149,10 @@ export function RabbitHoleWalkView({ data, displayQuery, onFollowBranch, onOpenN
                                 </React.Fragment>
                             ))}
                         </p>
-                        <p className="text-xs text-[#70757a] mt-3">
-                            Side branches stay on this map when possible; bigger jumps open a new shared question.
-                        </p>
                     </section>
                 )}
 
-                {atPrimary && nextChoices.length === 0 && (
+                {finishedApproach && atEndOfPath && nextChoices.length === 0 && (
                     <p className="text-sm text-[#70757a]">
                         You reached the end of this branch. Search from the bar above to start another hole.
                     </p>

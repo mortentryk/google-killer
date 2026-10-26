@@ -30,6 +30,7 @@ export default function TopicPage() {
     const loadTopic = useCallback(async (topicSlug: string) => {
         setLoading(true);
         setError(null);
+        setGraphData(null);
         try {
             const data = await getTopicBySlug(topicSlug);
             setGraphData(data);
@@ -55,7 +56,7 @@ export default function TopicPage() {
         if (startHole) {
             setView('map');
             setMapMode('walk');
-        } else {
+        } else if (fromFeed) {
             setView('answer');
         }
         if (fromFeed || startHole) {
@@ -106,7 +107,9 @@ export default function TopicPage() {
                     source,
                 });
             }
-            if (data.slug) navigate(`/q/${data.slug}`);
+            if (data.slug) {
+                navigate(`/q/${encodeURIComponent(data.slug)}?hole=1`);
+            }
             else setError('Missing topic link from server');
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Search failed');

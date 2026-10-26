@@ -21,7 +21,7 @@ interface Props {
     query: string;
     onQueryChange: (q: string) => void;
     onSearch: (q: string) => void;
-    onOpenTopic: (slug: string) => void;
+    onOpenTopic: (slug: string, mode?: 'discuss' | 'hole') => void;
     history: string[];
     recentSearches: RecentSearch[];
     recentLoading?: boolean;

@@ -90,7 +90,11 @@ export default function HomePage() {
                 query={query}
                 onQueryChange={setQuery}
                 onSearch={onSearch}
-                onOpenTopic={(slug) => navigate(`/q/${encodeURIComponent(slug)}?discuss=1`)}
+                onOpenTopic={(slug, mode = 'discuss') =>
+                    navigate(
+                        `/q/${encodeURIComponent(slug)}?${mode === 'hole' ? 'hole=1' : 'discuss=1'}`
+                    )
+                }
                 history={history}
                 recentSearches={recentSearches}
                 recentLoading={recentLoading}

@@ -71,3 +71,10 @@ export function getNextBranchChoices(currentNodeId: string, data: GraphData, vis
 
     return choices;
 }
+
+/** When the graph has no sibling/child branches, offer other topic nodes to jump to. */
+export function getFallbackExploreChoices(currentNodeId: string, data: GraphData, visitedIds: Set<string>): Node[] {
+    return data.nodes.filter(
+        (n) => !isHubNode(n) && n.id !== currentNodeId && !visitedIds.has(n.id)
+    );
+}
