@@ -54,6 +54,23 @@ export interface Comment {
     createdAt: string;
 }
 
+export interface JourneyStep {
+    id: string;
+    order: number;
+    slug: string;
+    displayQuery: string;
+    source: string;
+    nodeId: string;
+    nodeTitle?: string;
+    timestamp: string;
+}
+
+export interface RabbitHoleStory {
+    id: string;
+    startedAt: string;
+    steps: JourneyStep[];
+}
+
 export interface RecentSearch {
     id: string;
     displayQuery: string;

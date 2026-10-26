@@ -143,12 +143,17 @@ model Journey {
 }
 
 model JourneyStep {
-  id        String   @id @default(uuid())
-  journeyId String
-  nodeId    String
-  order     Int
-  timestamp DateTime @default(now())
+  id           String   @id @default(uuid())
+  journeyId    String
+  nodeId       String
+  slug         String
+  displayQuery String
+  source       String   @default("search")
+  order        Int
+  timestamp    DateTime @default(now())
 
   journey Journey @relation(fields: [journeyId], references: [id], onDelete: Cascade)
   node    Node    @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+
+  @@index([journeyId, order])
 }

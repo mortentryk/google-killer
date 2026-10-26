@@ -1,4 +1,4 @@
-import { GraphData, Node, Comment, WebLink, RecentSearch } from '../types';
+import { GraphData, Node, Comment, WebLink, RecentSearch, RabbitHoleStory, JourneyStep } from '../types';
 import { getApiBase } from './config';
 import { parseGraphPayload, parseNode } from '../utils/parseNode';
 import { errorFromBody, readJsonBody } from './http';
@@ -14,6 +14,39 @@ async function parseGraphResponse(res: Response): Promise<GraphData> {
         throw new Error(errorFromBody(body, 'Request failed'));
     }
     return parseGraphPayload(body as Record<string, unknown>);
+}
+
+export async function createJourney(): Promise<{ id: string; startedAt: string }> {
+    const res = await apiFetch('/journeys', { method: 'POST' });
+    const body = await readJsonBody(res);
+    if (!res.ok) throw new Error(errorFromBody(body, 'Could not start rabbit hole'));
+    return body as { id: string; startedAt: string };
+}
+
+export async function getJourney(id: string): Promise<RabbitHoleStory> {
+    const res = await apiFetch(`/journeys/${encodeURIComponent(id)}`);
+    const body = await readJsonBody(res);
+    if (!res.ok) throw new Error(errorFromBody(body, 'Rabbit hole not found'));
+    return body as RabbitHoleStory;
+}
+
+export async function appendJourneyStep(
+    journeyId: string,
+    input: {
+        nodeId: string;
+        slug: string;
+        displayQuery: string;
+        source?: string;
+    }
+): Promise<JourneyStep> {
+    const res = await apiFetch(`/journeys/${encodeURIComponent(journeyId)}/steps`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(input),
+    });
+    const body = await readJsonBody(res);
+    if (!res.ok) throw new Error(errorFromBody(body, 'Could not save step'));
+    return body as JourneyStep;
 }
 
 export async function getRecentSearches(limit = 12): Promise<RecentSearch[]> {

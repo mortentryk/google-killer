@@ -4,6 +4,7 @@ import { HomeLanding } from '../components/HomeLanding';
 import { getRecentSearches, searchNodes } from '../api/client';
 import { useSearchHistory } from '../hooks/useSearchHistory';
 import { RecentSearch } from '../types';
+import { useRabbitHole } from '../hooks/useRabbitHole';
 
 export default function HomePage() {
     const [query, setQuery] = useState('');
@@ -13,6 +14,7 @@ export default function HomePage() {
     const [recentLoading, setRecentLoading] = useState(true);
     const navigate = useNavigate();
     const { history, push } = useSearchHistory();
+    const { recordVisit } = useRabbitHole();
 
     const loadRecent = useCallback(async () => {
         setRecentLoading(true);
@@ -37,6 +39,14 @@ export default function HomePage() {
         try {
             const data = await searchNodes(trimmed);
             push(trimmed);
+            if (data.slug && data.primaryNodeId) {
+                await recordVisit({
+                    nodeId: data.primaryNodeId,
+                    slug: data.slug,
+                    displayQuery: data.displayQuery || trimmed,
+                    source: 'search',
+                });
+            }
             if (data.slug) {
                 navigate(`/q/${data.slug}`);
             } else {

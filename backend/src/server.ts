@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import prisma from './db/client';
 import { resolveSearch, resolveTopicBySlug } from './search/resolveSearch';
 import { listRecentSearches, recordSearchEvent } from './search/recentSearches';
+import { appendJourneyStep, createJourney, getJourneyPublic } from './journey/journeyService';
 import { rateLimit } from './middleware/rateLimit';
 import { commentSpamGuard } from './middleware/commentSpam';
 import { linkSpamGuard } from './middleware/linkSpam';
@@ -22,6 +23,8 @@ const recentSearchesLimiter = rateLimit({ prefix: 'searches-recent', windowMs: 6
 const commentReadLimiter = rateLimit({ prefix: 'comments-read', windowMs: 60_000, max: 120 });
 const commentWriteLimiter = rateLimit({ prefix: 'comments-write', windowMs: 15 * 60_000, max: 20 });
 const linkWriteLimiter = rateLimit({ prefix: 'links-write', windowMs: 15 * 60_000, max: 15 });
+const journeyWriteLimiter = rateLimit({ prefix: 'journey-write', windowMs: 15 * 60_000, max: 80 });
+const journeyReadLimiter = rateLimit({ prefix: 'journey-read', windowMs: 60_000, max: 120 });
 
 app.get('/', (req, res) => {
     res.send('Rabbit Hole API is running');
@@ -76,6 +79,89 @@ app.get('/searches/recent', recentSearchesLimiter, async (req, res) => {
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+app.post('/journeys', journeyWriteLimiter, async (_req, res) => {
+    try {
+        const journey = await createJourney();
+        res.status(201).json({ id: journey.id, startedAt: journey.startedAt.toISOString() });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+app.get('/journeys/:id', journeyReadLimiter, async (req, res) => {
+    const { id } = req.params;
+    try {
+        const journey = await getJourneyPublic(id);
+        if (!journey) {
+            res.status(404).json({ error: 'Rabbit hole not found' });
+            return;
+        }
+        res.json({
+            id: journey.id,
+            startedAt: journey.startedAt.toISOString(),
+            steps: journey.steps.map((s) => ({
+                id: s.id,
+                order: s.order,
+                slug: s.slug,
+                displayQuery: s.displayQuery,
+                source: s.source,
+                nodeId: s.nodeId,
+                nodeTitle: s.node.title,
+                timestamp: s.timestamp.toISOString(),
+            })),
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+app.post('/journeys/:id/steps', journeyWriteLimiter, async (req, res) => {
+    const { id } = req.params;
+    const body = req.body as {
+        nodeId?: string;
+        slug?: string;
+        displayQuery?: string;
+        source?: string;
+    };
+    if (!body.nodeId || !body.slug || !body.displayQuery) {
+        res.status(400).json({ error: 'nodeId, slug, and displayQuery are required' });
+        return;
+    }
+    try {
+        const step = await appendJourneyStep(id, {
+            nodeId: body.nodeId,
+            slug: body.slug,
+            displayQuery: body.displayQuery,
+            source: body.source,
+        });
+        if (!step) {
+            res.status(500).json({ error: 'Could not save step' });
+            return;
+        }
+        res.status(201).json({
+            id: step.id,
+            order: step.order,
+            slug: step.slug,
+            displayQuery: step.displayQuery,
+            source: step.source,
+            nodeId: step.nodeId,
+            timestamp: step.timestamp.toISOString(),
+        });
+    } catch (error) {
+        console.error(error);
+        const message = error instanceof Error ? error.message : 'Internal server error';
+        const status =
+            message === 'Journey not found'
+                ? 404
+                : message === 'Invalid journey step' || message.includes('step limit')
+                  ? 400
+                  : 500;
+        res.status(status).json({ error: message });
     }
 });
 

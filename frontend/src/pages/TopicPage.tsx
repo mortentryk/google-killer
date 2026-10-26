@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ResultsHeader } from '../components/ResultsHeader';
 import { GraphView } from '../components/GraphView';
 import { NodeDetailsPanel } from '../components/NodeDetailsPanel';
@@ -7,12 +7,16 @@ import { AnswerDiscussionPanel } from '../components/AnswerDiscussionPanel';
 import { getNode, getTopicBySlug, searchNodes } from '../api/client';
 import { GraphData, Node, ResultView } from '../types';
 import { useSearchHistory } from '../hooks/useSearchHistory';
+import { useRabbitHole } from '../hooks/useRabbitHole';
+import { RabbitHoleTrail } from '../components/RabbitHoleTrail';
 
 export default function TopicPage() {
     const { slug } = useParams<{ slug: string }>();
     const [searchParams, setSearchParams] = useSearchParams();
     const navigate = useNavigate();
+    const location = useLocation();
     const { push } = useSearchHistory();
+    const { recordVisit } = useRabbitHole();
 
     const [graphData, setGraphData] = useState<GraphData | null>(null);
     const [focusDiscussion, setFocusDiscussion] = useState(false);
@@ -77,7 +81,33 @@ export default function TopicPage() {
             .catch(() => setPrimaryNode(null));
     }, [graphData]);
 
-    const runSearch = async (rawQuery: string) => {
+    useEffect(() => {
+        if (!graphData?.primaryNodeId || !graphData.slug) return;
+        const skipRecord = (location.state as { skipRecord?: boolean } | null)?.skipRecord;
+        if (skipRecord) {
+            navigate(location.pathname + location.search, { replace: true, state: {} });
+            return;
+        }
+        const displayQuery = graphData.displayQuery || query;
+        void recordVisit({
+            nodeId: graphData.primaryNodeId,
+            slug: graphData.slug,
+            displayQuery,
+            source: 'topic',
+        });
+    }, [
+        graphData?.primaryNodeId,
+        graphData?.slug,
+        graphData?.displayQuery,
+        query,
+        recordVisit,
+        location.pathname,
+        location.search,
+        location.state,
+        navigate,
+    ]);
+
+    const runSearch = async (rawQuery: string, source: 'search' | 'trail' = 'search') => {
         const trimmed = rawQuery.trim();
         if (!trimmed) return;
         setLoading(true);
@@ -85,6 +115,14 @@ export default function TopicPage() {
         try {
             const data = await searchNodes(trimmed);
             push(trimmed);
+            if (data.slug && data.primaryNodeId) {
+                await recordVisit({
+                    nodeId: data.primaryNodeId,
+                    slug: data.slug,
+                    displayQuery: data.displayQuery || trimmed,
+                    source,
+                });
+            }
             if (data.slug) navigate(`/q/${data.slug}`);
             else setError('Missing topic link from server');
         } catch (err) {
@@ -110,6 +148,8 @@ export default function TopicPage() {
                 resultCount={graphData?.nodes.length ?? 0}
                 cached={graphData?.cached}
             />
+
+            <RabbitHoleTrail />
 
             {error && (
                 <p className="text-center text-sm text-[#d93025] py-3 px-4 bg-white border-b border-[#ebebeb]">
@@ -149,7 +189,7 @@ export default function TopicPage() {
                     onClose={() => setSelectedNode(null)}
                     onFollowTrail={(trailQuery) => {
                         setSelectedNode(null);
-                        void runSearch(trailQuery);
+                        void runSearch(trailQuery, 'trail');
                     }}
                 />
             )}
