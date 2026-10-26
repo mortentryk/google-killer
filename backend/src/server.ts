@@ -70,6 +70,7 @@ app.get('/searches/recent', recentSearchesLimiter, async (req, res) => {
                 displayQuery: row.displayQuery,
                 slug: row.slug,
                 createdAt: row.createdAt.toISOString(),
+                commentCount: row.commentCount,
             }))
         );
     } catch (error) {

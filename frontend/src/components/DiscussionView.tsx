@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Comment } from '../types';
 import { getComments, postComment } from '../api/client';
 
@@ -6,9 +6,10 @@ interface Props {
     nodeId: string;
     nodeTitle: string;
     embedded?: boolean;
+    focusDiscussion?: boolean;
 }
 
-export function DiscussionView({ nodeId, nodeTitle, embedded }: Props) {
+export function DiscussionView({ nodeId, nodeTitle, embedded, focusDiscussion }: Props) {
     const [comments, setComments] = useState<Comment[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -16,6 +17,17 @@ export function DiscussionView({ nodeId, nodeTitle, embedded }: Props) {
     const [authorName, setAuthorName] = useState('');
     const [posting, setPosting] = useState(false);
     const [honeypot, setHoneypot] = useState('');
+    const rootRef = useRef<HTMLDivElement>(null);
+    const commentRef = useRef<HTMLTextAreaElement>(null);
+
+    useEffect(() => {
+        if (!focusDiscussion) return;
+        const t = window.setTimeout(() => {
+            rootRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            commentRef.current?.focus();
+        }, 300);
+        return () => window.clearTimeout(t);
+    }, [focusDiscussion, nodeId, loading]);
 
     useEffect(() => {
         let cancelled = false;
@@ -52,10 +64,15 @@ export function DiscussionView({ nodeId, nodeTitle, embedded }: Props) {
     };
 
     return (
-        <div className={embedded ? 'px-5 py-6 h-full' : 'max-w-2xl mx-auto px-4 py-6'}>
+        <div
+            id="topic-discussion"
+            ref={rootRef}
+            className={embedded ? 'px-5 py-6 h-full scroll-mt-4' : 'max-w-2xl mx-auto px-4 py-6 scroll-mt-4'}
+        >
             <h2 className="text-lg text-[#202124] font-normal mb-1">Discussion</h2>
             <p className="text-sm text-[#70757a] mb-4">
-                Is this answer right? Everyone on this topic sees this thread.
+                Help others: say if this answer is right, add tips, or ask a follow-up. Everyone on this topic sees
+                this thread.
             </p>
 
             {loading && <p className="text-sm text-[#70757a]">Loading…</p>}
@@ -91,11 +108,12 @@ export function DiscussionView({ nodeId, nodeTitle, embedded }: Props) {
                     className="w-full border border-[#dfe1e5] rounded px-3 py-2 text-sm"
                 />
                 <textarea
+                    ref={commentRef}
                     value={text}
                     onChange={(e) => setText(e.target.value)}
-                    placeholder="Does this answer look correct?"
+                    placeholder="Does this answer look correct? What would you add?"
                     rows={3}
-                    className="w-full border border-[#dfe1e5] rounded px-3 py-2 text-sm"
+                    className="w-full border border-[#dfe1e5] rounded px-3 py-2 text-sm ring-[#1a73e8] focus:outline-none focus:ring-2"
                 />
                 <button
                     type="submit"

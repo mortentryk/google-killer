@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ResultsHeader } from '../components/ResultsHeader';
 import { GraphView } from '../components/GraphView';
 import { NodeDetailsPanel } from '../components/NodeDetailsPanel';
@@ -10,10 +10,12 @@ import { useSearchHistory } from '../hooks/useSearchHistory';
 
 export default function TopicPage() {
     const { slug } = useParams<{ slug: string }>();
+    const [searchParams, setSearchParams] = useSearchParams();
     const navigate = useNavigate();
     const { push } = useSearchHistory();
 
     const [graphData, setGraphData] = useState<GraphData | null>(null);
+    const [focusDiscussion, setFocusDiscussion] = useState(false);
     const [query, setQuery] = useState('');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -40,6 +42,23 @@ export default function TopicPage() {
     useEffect(() => {
         if (slug) loadTopic(slug);
     }, [slug, loadTopic]);
+
+    useEffect(() => {
+        const fromFeed = searchParams.get('discuss') === '1';
+        setFocusDiscussion(fromFeed);
+        if (fromFeed) {
+            setSearchParams(
+                (prev) => {
+                    const next = new URLSearchParams(prev);
+                    next.delete('discuss');
+                    return next;
+                },
+                { replace: true }
+            );
+        }
+        // Read ?discuss=1 only when the topic slug changes (not when we strip the query param).
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [slug]);
 
     const [primaryNode, setPrimaryNode] = useState<Node | null>(null);
 
@@ -113,6 +132,7 @@ export default function TopicPage() {
                         slug={graphData.slug}
                         cached={graphData.cached}
                         generated={graphData.generated}
+                        focusDiscussion={focusDiscussion && !loading && !!primaryNode}
                     />
                 )}
 

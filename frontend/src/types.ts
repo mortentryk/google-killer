@@ -59,6 +59,7 @@ export interface RecentSearch {
     displayQuery: string;
     slug: string;
     createdAt: string;
+    commentCount?: number;
 }
 
 export interface WebLink {

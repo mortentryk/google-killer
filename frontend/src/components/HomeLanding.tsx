@@ -78,8 +78,11 @@ export function HomeLanding({
                 </div>
 
                 <div className="mt-12 w-full max-w-lg">
-                    <p className="text-xs text-[#70757a] uppercase tracking-wide mb-3 text-center">
+                    <p className="text-xs text-[#70757a] uppercase tracking-wide mb-1 text-center">
                         Latest searches
+                    </p>
+                    <p className="text-xs text-[#70757a] mb-3 text-center px-2">
+                        Click a question to open it and jump into the discussion — help verify answers or add tips.
                     </p>
                     <div className="rounded-lg border border-[#ebebeb] bg-[#f8f9fa] overflow-hidden">
                         {recentLoading && recentSearches.length === 0 && (
@@ -97,14 +100,21 @@ export function HomeLanding({
                                         <button
                                             type="button"
                                             onClick={() => onOpenTopic(item.slug)}
-                                            className="w-full text-left px-4 py-3 hover:bg-[#f1f3f4] flex items-baseline justify-between gap-3 group"
+                                            className="w-full text-left px-4 py-3 hover:bg-[#f1f3f4] group"
                                         >
-                                            <span className="text-sm text-[#1a0dab] group-hover:underline truncate">
-                                                {item.displayQuery}
-                                            </span>
-                                            <span className="text-xs text-[#70757a] shrink-0">
-                                                {formatRelativeTime(item.createdAt)}
-                                            </span>
+                                            <div className="flex items-baseline justify-between gap-3">
+                                                <span className="text-sm text-[#1a0dab] group-hover:underline truncate">
+                                                    {item.displayQuery}
+                                                </span>
+                                                <span className="text-xs text-[#70757a] shrink-0">
+                                                    {formatRelativeTime(item.createdAt)}
+                                                </span>
+                                            </div>
+                                            <p className="text-xs text-[#70757a] mt-1 group-hover:text-[#1a73e8]">
+                                                {(item.commentCount ?? 0) === 0
+                                                    ? 'No comments yet — be the first to help'
+                                                    : `${item.commentCount} comment${item.commentCount === 1 ? '' : 's'} · join the discussion`}
+                                            </p>
                                         </button>
                                     </li>
                                 ))}

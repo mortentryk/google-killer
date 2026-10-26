@@ -9,6 +9,7 @@ interface Props {
     slug: string;
     cached?: boolean;
     generated?: boolean;
+    focusDiscussion?: boolean;
 }
 
 export function AnswerDiscussionPanel({
@@ -17,6 +18,7 @@ export function AnswerDiscussionPanel({
     slug,
     cached,
     generated,
+    focusDiscussion,
 }: Props) {
     return (
         <div className="max-w-[1400px] mx-auto w-full h-full min-h-0 flex flex-col lg:flex-row lg:items-stretch">
@@ -31,7 +33,12 @@ export function AnswerDiscussionPanel({
                 />
             </section>
             <aside className="w-full lg:w-[min(420px,40%)] shrink-0 overflow-y-auto bg-[#fafafa] lg:bg-white border-t lg:border-t-0 border-[#ebebeb]">
-                <DiscussionView nodeId={node.id} nodeTitle={node.title} embedded />
+                <DiscussionView
+                    nodeId={node.id}
+                    nodeTitle={node.title}
+                    embedded
+                    focusDiscussion={focusDiscussion}
+                />
             </aside>
         </div>
     );
