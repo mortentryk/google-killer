@@ -1,8 +1,9 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Logo } from './Logo';
 import { SearchBar } from './SearchBar';
+import { RecentSearchesList } from './RecentSearchesList';
 import { RecentSearch } from '../types';
-import { formatRelativeTime } from '../utils/formatRelativeTime';
 
 const SAMPLES = [
     'fix leaking radiator',
@@ -11,6 +12,8 @@ const SAMPLES = [
     'when to call a plumber',
     'home heating not working',
 ];
+
+const HOME_PREVIEW_COUNT = 5;
 
 interface Props {
     query: string;
@@ -37,11 +40,16 @@ export function HomeLanding({
         onSearch(pick);
     };
 
+    const preview = recentSearches.slice(0, HOME_PREVIEW_COUNT);
+    const hasMore = recentSearches.length > HOME_PREVIEW_COUNT;
+
     return (
         <div className="min-h-screen flex flex-col bg-white text-[#202124]">
             <header className="flex justify-end gap-4 px-5 py-4 text-sm text-[#202124]">
-                <span className="hover:underline cursor-default">Shared answers</span>
-                <span className="hover:underline cursor-default">Side trails</span>
+                <Link to="/searches" className="hover:underline text-[#1a0dab]">
+                    Latest searches
+                </Link>
+                <span className="hover:underline cursor-default text-[#70757a]">Side trails</span>
             </header>
 
             <main className="flex-1 flex flex-col items-center justify-center px-4 pb-16 -mt-12">
@@ -77,51 +85,33 @@ export function HomeLanding({
                     </button>
                 </div>
 
-                <div className="mt-12 w-full max-w-lg">
-                    <p className="text-xs text-[#70757a] uppercase tracking-wide mb-1 text-center">
-                        Latest searches
-                    </p>
-                    <p className="text-xs text-[#70757a] mb-3 text-center px-2">
-                        Click a question to open it and jump into the discussion — help verify answers or add tips.
-                    </p>
-                    <div className="rounded-lg border border-[#ebebeb] bg-[#f8f9fa] overflow-hidden">
-                        {recentLoading && recentSearches.length === 0 && (
-                            <p className="text-sm text-[#70757a] py-6 text-center">Loading what people searched…</p>
-                        )}
-                        {!recentLoading && recentSearches.length === 0 && (
-                            <p className="text-sm text-[#70757a] py-6 px-4 text-center">
-                                No searches yet — be the first to go down the hole.
+                {(preview.length > 0 || recentLoading) && (
+                    <div className="mt-12 w-full max-w-lg">
+                        <div className="flex items-end justify-between gap-2 mb-3">
+                            <div className="text-left">
+                                <p className="text-xs text-[#70757a] uppercase tracking-wide">Latest searches</p>
+                                <p className="text-xs text-[#70757a] mt-1">Tap to help in the discussion</p>
+                            </div>
+                            <Link to="/searches" className="text-sm text-[#1a0dab] hover:underline shrink-0">
+                                See all
+                            </Link>
+                        </div>
+                        <div className="rounded-lg border border-[#ebebeb] bg-[#f8f9fa] overflow-hidden">
+                            <RecentSearchesList
+                                items={preview}
+                                loading={recentLoading}
+                                onOpenTopic={onOpenTopic}
+                            />
+                        </div>
+                        {hasMore && (
+                            <p className="text-center mt-3">
+                                <Link to="/searches" className="text-sm text-[#1a0dab] hover:underline">
+                                    View all recent searches →
+                                </Link>
                             </p>
                         )}
-                        {recentSearches.length > 0 && (
-                            <ul className="divide-y divide-[#ebebeb] bg-white">
-                                {recentSearches.map((item) => (
-                                    <li key={item.id}>
-                                        <button
-                                            type="button"
-                                            onClick={() => onOpenTopic(item.slug)}
-                                            className="w-full text-left px-4 py-3 hover:bg-[#f1f3f4] group"
-                                        >
-                                            <div className="flex items-baseline justify-between gap-3">
-                                                <span className="text-sm text-[#1a0dab] group-hover:underline truncate">
-                                                    {item.displayQuery}
-                                                </span>
-                                                <span className="text-xs text-[#70757a] shrink-0">
-                                                    {formatRelativeTime(item.createdAt)}
-                                                </span>
-                                            </div>
-                                            <p className="text-xs text-[#70757a] mt-1 group-hover:text-[#1a73e8]">
-                                                {(item.commentCount ?? 0) === 0
-                                                    ? 'No comments yet — be the first to help'
-                                                    : `${item.commentCount} comment${item.commentCount === 1 ? '' : 's'} · join the discussion`}
-                                            </p>
-                                        </button>
-                                    </li>
-                                ))}
-                            </ul>
-                        )}
                     </div>
-                </div>
+                )}
 
                 {history.length > 0 && (
                     <div className="mt-8 w-full max-w-lg text-center">

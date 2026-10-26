@@ -17,7 +17,7 @@ export default function HomePage() {
     const loadRecent = useCallback(async () => {
         setRecentLoading(true);
         try {
-            setRecentSearches(await getRecentSearches(12));
+            setRecentSearches(await getRecentSearches(20));
         } catch {
             setRecentSearches([]);
         } finally {
