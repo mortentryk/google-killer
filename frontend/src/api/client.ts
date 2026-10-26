@@ -1,4 +1,4 @@
-import { GraphData, LatestSearch, Node } from '../types';
+import { GraphData, LatestSearch, Node, SearchComment, SearchThread } from '../types';
 
 const API_URL = 'http://localhost:3001';
 
@@ -39,6 +39,22 @@ export async function getLatestSearches(): Promise<LatestSearch[]> {
     if (!res.ok) throw new Error('Failed to fetch latest searches');
     const data: { searches: LatestSearch[] } = await res.json();
     return data.searches ?? [];
+}
+
+export async function getSearchThread(query: string): Promise<SearchThread> {
+    const res = await fetch(`${API_URL}/thread?q=${encodeURIComponent(query)}`);
+    if (!res.ok) throw new Error('Failed to fetch search thread');
+    return res.json();
+}
+
+export async function postSearchComment(query: string, authorName: string, text: string): Promise<SearchComment> {
+    const res = await fetch(`${API_URL}/thread/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query, authorName, text }),
+    });
+    if (!res.ok) throw new Error('Failed to post comment');
+    return res.json();
 }
 
 export async function getNode(id: string): Promise<Node> {

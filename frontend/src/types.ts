@@ -41,3 +41,27 @@ export interface LatestSearch {
     query: string;
     searchedAt: string;
 }
+
+export interface AiAnswer {
+    title: string;
+    summary: string;
+    steps: string[];
+    difficulty: number;
+    timeEstimate: string;
+    costEstimate: string;
+    tools: string[];
+    materials: string[];
+}
+
+export interface SearchComment {
+    id: string;
+    authorName: string;
+    text: string;
+    createdAt: string;
+}
+
+export interface SearchThread {
+    query: string;
+    answer: AiAnswer | null;
+    comments: SearchComment[];
+}

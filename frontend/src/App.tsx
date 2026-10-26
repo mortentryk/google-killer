@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { SearchBar } from './components/SearchBar';
 import { LatestSearches } from './components/LatestSearches';
 import { GraphView } from './components/GraphView';
-import { NodeDetailsPanel } from './components/NodeDetailsPanel';
+import { SearchThreadPanel } from './components/SearchThreadPanel';
 import { searchNodes } from './api/client';
 import { GraphData, Node } from './types';
 
@@ -14,7 +14,8 @@ export default function App() {
   const queryParam = searchParams.get('q') ?? '';
   const [draft, setDraft] = useState(queryParam);
   const [graphData, setGraphData] = useState<GraphData>(emptyGraph);
-  const [selectedNode, setSelectedNode] = useState<Node | null>(null);
+  const [focusedNode, setFocusedNode] = useState<Node | null>(null);
+  const [threadOpen, setThreadOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [searchRevision, setSearchRevision] = useState(0);
 
@@ -26,24 +27,21 @@ export default function App() {
     const trimmed = queryParam.trim();
     if (!trimmed) {
       setGraphData(emptyGraph);
-      setSelectedNode(null);
+      setFocusedNode(null);
+      setThreadOpen(false);
       setLoading(false);
       return;
     }
 
     let cancelled = false;
     setLoading(true);
-    setSelectedNode(null);
+    setFocusedNode(null);
+    setThreadOpen(true);
 
     searchNodes(trimmed)
       .then((data) => {
         if (cancelled) return;
         setGraphData(data);
-        if (data.path.length > 0) {
-          const lastNodeId = data.path[data.path.length - 1];
-          const lastNode = data.nodes.find((node) => node.id === lastNodeId) ?? null;
-          setSelectedNode(lastNode);
-        }
       })
       .catch((error) => {
         console.error('Search failed', error);
@@ -86,14 +84,16 @@ export default function App() {
         <GraphView
           key={queryParam || 'empty'}
           data={graphData}
-          onNodeClick={setSelectedNode}
+          onNodeClick={setFocusedNode}
         />
       </div>
 
-      {selectedNode && (
-        <NodeDetailsPanel
-          node={selectedNode}
-          onClose={() => setSelectedNode(null)}
+      {threadOpen && queryParam.trim() && (
+        <SearchThreadPanel
+          query={queryParam}
+          node={focusedNode}
+          onShowBest={() => setFocusedNode(null)}
+          onClose={() => setThreadOpen(false)}
         />
       )}
     </div>

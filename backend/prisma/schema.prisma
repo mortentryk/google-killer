@@ -122,3 +122,23 @@ model Search {
 
   @@index([createdAt(sort: Desc)])
 }
+
+model SearchThread {
+  id        String          @id @default(uuid())
+  queryKey  String          @unique
+  query     String
+  createdAt DateTime        @default(now())
+  comments  SearchComment[]
+}
+
+model SearchComment {
+  id         String   @id @default(uuid())
+  threadId   String
+  authorName String
+  text       String
+  createdAt  DateTime @default(now())
+
+  thread SearchThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  @@index([threadId, createdAt])
+}
