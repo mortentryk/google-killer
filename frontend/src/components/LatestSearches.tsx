@@ -1,18 +1,19 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { getLatestSearches } from '../api/client';
 import { LatestSearch } from '../types';
 
 interface Props {
     refreshKey: number;
-    onSelect: (query: string) => void;
+    activeQuery: string;
 }
 
 const POLL_MS = 10000;
 
-export function LatestSearches({ refreshKey, onSelect }: Props) {
+export function LatestSearches({ refreshKey, activeQuery }: Props) {
     const [searches, setSearches] = useState<LatestSearch[]>([]);
     const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
-    const [open, setOpen] = useState(true);
+    const [open, setOpen] = useState(activeQuery.trim() === '');
 
     useEffect(() => {
         let cancelled = false;
@@ -39,6 +40,10 @@ export function LatestSearches({ refreshKey, onSelect }: Props) {
             window.clearInterval(timer);
         };
     }, [refreshKey]);
+
+    useEffect(() => {
+        setOpen(activeQuery.trim() === '');
+    }, [activeQuery]);
 
     return (
         <section
@@ -68,23 +73,26 @@ export function LatestSearches({ refreshKey, onSelect }: Props) {
                 )}
                 {open && searches.length > 0 && (
                     <ul className="max-h-64 overflow-y-auto px-2 pb-2">
-                        {searches.map((search) => (
-                            <li key={search.query.toLocaleLowerCase()}>
-                                <button
-                                    type="button"
-                                    onClick={() => onSelect(search.query)}
-                                    className="w-full flex items-center justify-between gap-3 rounded-xl px-3 py-2 text-left hover:bg-gray-800 transition-colors"
-                                >
-                                    <span className="text-sm text-text truncate">{search.query}</span>
-                                    <time
-                                        dateTime={search.searchedAt}
-                                        className="shrink-0 text-xs text-textSecondary"
+                        {searches.map((search) => {
+                            const active = search.query.toLocaleLowerCase() === activeQuery.trim().toLocaleLowerCase();
+                            return (
+                                <li key={search.query.toLocaleLowerCase()}>
+                                    <Link
+                                        to={`/?q=${encodeURIComponent(search.query)}`}
+                                        aria-current={active ? 'page' : undefined}
+                                        className={`w-full flex items-center justify-between gap-3 rounded-xl px-3 py-2 text-left hover:bg-gray-800 transition-colors ${active ? 'bg-gray-800' : ''}`}
                                     >
-                                        {formatSearchedAt(search.searchedAt)}
-                                    </time>
-                                </button>
-                            </li>
-                        ))}
+                                        <span className="text-sm text-text truncate">{search.query}</span>
+                                        <time
+                                            dateTime={search.searchedAt}
+                                            className="shrink-0 text-xs text-textSecondary"
+                                        >
+                                            {formatSearchedAt(search.searchedAt)}
+                                        </time>
+                                    </Link>
+                                </li>
+                            );
+                        })}
                     </ul>
                 )}
             </div>

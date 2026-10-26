@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { SearchBar } from './components/SearchBar';
 import { LatestSearches } from './components/LatestSearches';
 import { GraphView } from './components/GraphView';
@@ -6,40 +7,73 @@ import { NodeDetailsPanel } from './components/NodeDetailsPanel';
 import { searchNodes } from './api/client';
 import { GraphData, Node } from './types';
 
+const emptyGraph: GraphData = { nodes: [], edges: [], path: [] };
+
 export default function App() {
-  const [query, setQuery] = useState('');
-  const [graphData, setGraphData] = useState<GraphData>({ nodes: [], edges: [], path: [] });
+  const [searchParams, setSearchParams] = useSearchParams();
+  const queryParam = searchParams.get('q') ?? '';
+  const [draft, setDraft] = useState(queryParam);
+  const [graphData, setGraphData] = useState<GraphData>(emptyGraph);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [loading, setLoading] = useState(false);
   const [searchRevision, setSearchRevision] = useState(0);
 
-  const handleSearch = async (nextQuery: string) => {
+  useEffect(() => {
+    setDraft(queryParam);
+  }, [queryParam]);
+
+  useEffect(() => {
+    const trimmed = queryParam.trim();
+    if (!trimmed) {
+      setGraphData(emptyGraph);
+      setSelectedNode(null);
+      setLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setLoading(true);
+    setSelectedNode(null);
+
+    searchNodes(trimmed)
+      .then((data) => {
+        if (cancelled) return;
+        setGraphData(data);
+        if (data.path.length > 0) {
+          const lastNodeId = data.path[data.path.length - 1];
+          const lastNode = data.nodes.find((node) => node.id === lastNodeId) ?? null;
+          setSelectedNode(lastNode);
+        }
+      })
+      .catch((error) => {
+        console.error('Search failed', error);
+        if (!cancelled) setGraphData(emptyGraph);
+      })
+      .then(() => {
+        if (cancelled) return;
+        setLoading(false);
+        setSearchRevision((revision) => revision + 1);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [queryParam]);
+
+  const openMindMap = (nextQuery: string) => {
     const trimmed = nextQuery.trim();
     if (!trimmed) return;
-
-    setQuery(trimmed);
-    setLoading(true);
-    try {
-      const data = await searchNodes(trimmed);
-      setGraphData(data);
-      if (data.path.length > 0) {
-        const lastNodeId = data.path[data.path.length - 1];
-        const lastNode = data.nodes.find(n => n.id === lastNodeId);
-        setSelectedNode(lastNode ?? null);
-      }
-    } catch (error) {
-      console.error('Search failed', error);
-    } finally {
-      setLoading(false);
-      setSearchRevision((revision) => revision + 1);
-    }
+    setSearchParams({ q: trimmed });
   };
 
   return (
     <div className="app w-full h-screen flex flex-col bg-background text-text overflow-hidden relative">
       <div className="absolute top-0 left-0 w-full z-10">
-        <SearchBar query={query} onQueryChange={setQuery} onSearch={handleSearch} />
-        <LatestSearches refreshKey={searchRevision} onSelect={handleSearch} />
+        <SearchBar query={draft} onQueryChange={setDraft} onSearch={openMindMap} />
+        <LatestSearches
+          refreshKey={searchRevision}
+          activeQuery={queryParam}
+        />
       </div>
 
       <div className="flex-1 relative h-full">
@@ -50,6 +84,7 @@ export default function App() {
         )}
 
         <GraphView
+          key={queryParam || 'empty'}
           data={graphData}
           onNodeClick={setSelectedNode}
         />
