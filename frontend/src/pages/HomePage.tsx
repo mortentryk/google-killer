@@ -78,7 +78,9 @@ export default function HomePage() {
             {loading && (
                 <div className="fixed inset-0 z-50 bg-white/80 flex flex-col items-center justify-center">
                     <div className="w-10 h-10 border-2 border-[#4285F4] border-t-transparent rounded-full animate-spin" />
-                    <p className="mt-3 text-sm text-[#70757a]">Finding or creating the shared answer…</p>
+                    <p className="mt-3 text-sm text-[#70757a]">
+                        Creating shared answer and mind map…
+                    </p>
                 </div>
             )}
             {error && (

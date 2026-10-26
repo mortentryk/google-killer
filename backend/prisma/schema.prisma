@@ -54,12 +54,15 @@ model Node {
 }
 
 model SearchTopic {
-  id              String   @id @default(uuid())
-  slug            String   @unique
-  normalizedQuery String   @unique
-  displayQuery    String
-  primaryNodeId   String
-  createdAt       DateTime @default(now())
+  id                   String    @id @default(uuid())
+  slug                 String    @unique
+  normalizedQuery      String    @unique
+  displayQuery         String
+  primaryNodeId        String
+  reviewedAt           DateTime?
+  reviewRevisionUsed   Boolean   @default(false)
+  generationMeta       Json?
+  createdAt            DateTime  @default(now())
 
   primaryNode Node @relation(fields: [primaryNodeId], references: [id], onDelete: Cascade)
 

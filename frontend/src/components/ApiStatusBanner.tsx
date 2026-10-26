@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { getApiBase } from '../api/config';
 
+type Banner = { kind: 'error' | 'info'; message: string };
+
 export function ApiStatusBanner() {
-    const [problem, setProblem] = useState<string | null>(null);
+    const [banner, setBanner] = useState<Banner | null>(null);
 
     useEffect(() => {
         let cancelled = false;
@@ -14,13 +16,24 @@ export function ApiStatusBanner() {
                 if (text.includes('<!DOCTYPE html>')) {
                     throw new Error('html');
                 }
-                JSON.parse(text);
-                if (!cancelled) setProblem(null);
+                const data = JSON.parse(text) as { openaiConfigured?: boolean };
+                if (cancelled) return;
+                if (data.openaiConfigured === false) {
+                    setBanner({
+                        kind: 'info',
+                        message:
+                            'OpenAI is not configured on the API — new searches save a basic offline mind map. Add OPENAI_API_KEY in backend/.env for full AI answers.',
+                    });
+                    return;
+                }
+                setBanner(null);
             } catch {
                 if (!cancelled) {
-                    setProblem(
-                        'Backend API is not reachable. In a second terminal run: cd backend && npx prisma db push && npm run dev (port 3001).'
-                    );
+                    setBanner({
+                        kind: 'error',
+                        message:
+                            'Backend API is not reachable. In a second terminal run: cd backend && npx prisma db push && npm run dev (port 3001).',
+                    });
                 }
             }
         };
@@ -32,11 +45,18 @@ export function ApiStatusBanner() {
         };
     }, []);
 
-    if (!problem) return null;
+    if (!banner) return null;
+
+    const styles =
+        banner.kind === 'error'
+            ? 'bg-[#fce8e6] text-[#c5221f] border-[#f5c2c0]'
+            : 'bg-[#fef7e0] text-[#5f6368] border-[#f9e8a8]';
 
     return (
-        <div className="bg-[#fce8e6] text-[#c5221f] text-sm text-center px-4 py-2 border-b border-[#f5c2c0] z-50 shrink-0">
-            {problem}
+        <div
+            className={`${styles} text-sm text-center px-4 py-2 border-b z-50 shrink-0`}
+        >
+            {banner.message}
         </div>
     );
 }

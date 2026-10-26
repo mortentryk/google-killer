@@ -11,6 +11,8 @@ export type GraphPayload = {
     cached: boolean;
     generated: boolean;
     normalizedQuery: string;
+    aiReviewed?: boolean;
+    reviewRevisionUsed?: boolean;
 };
 
 /** Mind map for one topic: primary node, its CHILD-chain ancestors, and CHILD-chain descendants only (no sibling branches). */
@@ -65,6 +67,8 @@ export async function payloadForTopic(
         displayQuery: string;
         normalizedQuery: string;
         primaryNodeId: string;
+        reviewedAt?: Date | null;
+        reviewRevisionUsed?: boolean;
     },
     flags: { cached: boolean; generated: boolean }
 ): Promise<GraphPayload> {
@@ -77,5 +81,7 @@ export async function payloadForTopic(
         normalizedQuery: topic.normalizedQuery,
         cached: flags.cached,
         generated: flags.generated,
+        aiReviewed: Boolean(topic.reviewedAt),
+        reviewRevisionUsed: topic.reviewRevisionUsed ?? false,
     };
 }

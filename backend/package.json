@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "ts-node --transpile-only src/search/search.test.ts",
     "postinstall": "prisma generate",
     "dev": "nodemon --exec \"npx prisma generate && ts-node src/server.ts\" --watch src --watch prisma/schema.prisma",
     "build": "prisma generate && tsc",
