@@ -53,3 +53,12 @@ export interface Comment {
     text: string;
     createdAt: string;
 }
+
+export interface WebLink {
+    id: string;
+    nodeId: string;
+    url: string;
+    title: string;
+    authorName: string;
+    createdAt: string;
+}

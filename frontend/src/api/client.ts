@@ -1,4 +1,4 @@
-import { GraphData, Node, Comment } from '../types';
+import { GraphData, Node, Comment, WebLink } from '../types';
 import { getApiBase } from './config';
 import { parseGraphPayload, parseNode } from '../utils/parseNode';
 import { errorFromBody, readJsonBody } from './http';
@@ -61,4 +61,35 @@ export async function postComment(
         throw new Error(errorFromBody(body, 'Failed to post comment'));
     }
     return body as Comment;
+}
+
+export async function getWebLinks(nodeId: string): Promise<WebLink[]> {
+    const res = await apiFetch(`/nodes/${nodeId}/links`);
+    const body = await readJsonBody(res);
+    if (!res.ok) {
+        throw new Error(errorFromBody(body, 'Failed to load links'));
+    }
+    if (!Array.isArray(body)) {
+        throw new Error('Failed to load links');
+    }
+    return body as WebLink[];
+}
+
+export async function postWebLink(
+    nodeId: string,
+    url: string,
+    title?: string,
+    authorName?: string,
+    honeypot?: string
+): Promise<WebLink> {
+    const res = await apiFetch(`/nodes/${nodeId}/links`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, title, authorName, website: honeypot ?? '' }),
+    });
+    const body = await readJsonBody(res);
+    if (!res.ok) {
+        throw new Error(errorFromBody(body, 'Failed to add link'));
+    }
+    return body as WebLink;
 }

@@ -5,6 +5,7 @@ import prisma from './db/client';
 import { resolveSearch, resolveTopicBySlug } from './search/resolveSearch';
 import { rateLimit } from './middleware/rateLimit';
 import { commentSpamGuard } from './middleware/commentSpam';
+import { linkSpamGuard } from './middleware/linkSpam';
 
 dotenv.config();
 
@@ -18,6 +19,7 @@ app.use(express.json({ limit: '32kb' }));
 const searchLimiter = rateLimit({ prefix: 'search', windowMs: 60_000, max: 40 });
 const commentReadLimiter = rateLimit({ prefix: 'comments-read', windowMs: 60_000, max: 120 });
 const commentWriteLimiter = rateLimit({ prefix: 'comments-write', windowMs: 15 * 60_000, max: 20 });
+const linkWriteLimiter = rateLimit({ prefix: 'links-write', windowMs: 15 * 60_000, max: 15 });
 
 app.get('/', (req, res) => {
     res.send('Antigravity API is running');
@@ -126,6 +128,54 @@ app.post('/nodes/:id/comments', commentWriteLimiter, commentSpamGuard, async (re
             },
         });
         res.status(201).json(comment);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+app.get('/nodes/:id/links', commentReadLimiter, async (req, res) => {
+    const { id } = req.params;
+    try {
+        const links = await prisma.webLink.findMany({
+            where: { nodeId: id },
+            orderBy: { createdAt: 'asc' },
+        });
+        res.json(links);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+app.post('/nodes/:id/links', linkWriteLimiter, linkSpamGuard, async (req, res) => {
+    const { id } = req.params;
+    const { title, authorName } = req.body as { title?: string; authorName?: string };
+    const url = (req as express.Request & { normalizedLinkUrl?: string }).normalizedLinkUrl;
+
+    if (!url) {
+        res.status(400).json({ error: 'Enter a valid http or https link' });
+        return;
+    }
+
+    try {
+        const node = await prisma.node.findUnique({ where: { id } });
+        if (!node) {
+            res.status(404).json({ error: 'Node not found' });
+            return;
+        }
+
+        const link = await prisma.webLink.create({
+            data: {
+                nodeId: id,
+                url,
+                title: typeof title === 'string' ? title.trim().slice(0, 200) : '',
+                authorName: typeof authorName === 'string' && authorName.trim()
+                    ? authorName.trim().slice(0, 80)
+                    : 'Guest',
+            },
+        });
+        res.status(201).json(link);
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Internal server error' });

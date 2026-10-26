@@ -44,6 +44,7 @@ model Node {
   outgoingEdges Edge[]    @relation("FromNode")
   incomingEdges Edge[]    @relation("ToNode")
   comments      Comment[]
+  webLinks      WebLink[]
   videos        Video[]
   journeySteps  JourneyStep[]
   searchTopics  SearchTopic[]
@@ -87,6 +88,19 @@ model Comment {
 
   node Node  @relation(fields: [nodeId], references: [id], onDelete: Cascade)
   user User? @relation(fields: [userId], references: [id])
+}
+
+model WebLink {
+  id          String   @id @default(uuid())
+  nodeId      String
+  url         String
+  title       String   @default("")
+  authorName  String   @default("Guest")
+  createdAt   DateTime @default(now())
+
+  node Node @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+
+  @@index([nodeId])
 }
 
 model Video {

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Node } from '../types';
+import { ManualLinksSection } from './ManualLinksSection';
 
 interface Props {
     node: Node;
@@ -54,10 +55,12 @@ export function AnswerView({ node, displayQuery, slug, cached, generated, embedd
                 )}
             </div>
 
-            <div className="border border-[#ebebeb] rounded-lg p-3 bg-white text-sm">
+            <div className="border border-[#ebebeb] rounded-lg p-3 bg-white text-sm mb-2">
                 <div className="text-[#70757a] text-xs mb-1">Share this answer</div>
                 <code className="text-[#1a0dab] break-all">{shareUrl}</code>
             </div>
+
+            <ManualLinksSection nodeId={node.id} />
         </div>
     );
 }
