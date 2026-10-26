@@ -16,7 +16,7 @@ interface Props {
 
 const TABS: { id: ResultView; label: string }[] = [
     { id: 'answer', label: 'Answer' },
-    { id: 'map', label: 'Rabbit hole' },
+    { id: 'map', label: 'Mind map' },
 ];
 
 export function ResultsHeader({

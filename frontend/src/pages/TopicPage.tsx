@@ -24,7 +24,7 @@ export default function TopicPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [view, setView] = useState<ResultView>('answer');
-    const [mapMode, setMapMode] = useState<'walk' | 'network'>('walk');
+    const [guidedPath, setGuidedPath] = useState(false);
     const [selectedNode, setSelectedNode] = useState<Node | null>(null);
 
     const loadTopic = useCallback(async (topicSlug: string) => {
@@ -36,7 +36,7 @@ export default function TopicPage() {
             setGraphData(data);
             setQuery(data.displayQuery || '');
             setSelectedNode(null);
-            setMapMode('walk');
+            setGuidedPath(false);
         } catch (err) {
             setGraphData(null);
             setError(err instanceof Error ? err.message : 'Topic not found');
@@ -51,26 +51,25 @@ export default function TopicPage() {
 
     useEffect(() => {
         const fromFeed = searchParams.get('discuss') === '1';
-        const startHole = searchParams.get('hole') === '1';
+        const openMap = searchParams.get('map') === '1';
         setFocusDiscussion(fromFeed);
-        if (startHole) {
+        if (openMap) {
             setView('map');
-            setMapMode('walk');
+            setGuidedPath(false);
         } else if (fromFeed) {
             setView('answer');
         }
-        if (fromFeed || startHole) {
+        if (fromFeed || openMap) {
             setSearchParams(
                 (prev) => {
                     const next = new URLSearchParams(prev);
                     next.delete('discuss');
-                    next.delete('hole');
+                    next.delete('map');
                     return next;
                 },
                 { replace: true }
             );
         }
-        // Read query flags only when the topic slug changes.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [slug]);
 
@@ -111,8 +110,8 @@ export default function TopicPage() {
                 setGraphData(null);
                 setLoading(true);
                 setView('map');
-                setMapMode('walk');
-                navigate(`/q/${encodeURIComponent(data.slug)}?hole=1`);
+                setGuidedPath(false);
+                navigate(`/q/${encodeURIComponent(data.slug)}?map=1`);
                 return;
             }
             setError('Missing topic link from server');
@@ -166,40 +165,15 @@ export default function TopicPage() {
                     />
                 )}
 
-                {!loading && graphData && view === 'map' && mapMode === 'walk' && (
-                    <div className="absolute inset-0 flex flex-col">
-                        <div className="shrink-0 flex justify-end px-4 py-2 bg-white border-b border-[#ebebeb]">
-                            <button
-                                type="button"
-                                onClick={() => setMapMode('network')}
-                                className="text-xs text-[#1a0dab] hover:underline"
-                            >
-                                Full network map
-                            </button>
-                        </div>
-                        <div className="flex-1 min-h-0">
-                            <RabbitHoleWalkView
-                                data={graphData}
-                                displayQuery={graphData.displayQuery || query}
-                                onFollowBranch={(node: Node) => {
-                                    if (node.id === graphData.primaryNodeId) return;
-                                }}
-                                onOpenNewTopic={(q: string) => void runSearch(q, 'trail')}
-                                onShowAnswer={() => setView('answer')}
-                            />
-                        </div>
-                    </div>
-                )}
-
-                {!loading && graphData && view === 'map' && mapMode === 'network' && (
+                {!loading && graphData && view === 'map' && !guidedPath && (
                     <div className="absolute inset-0 flex flex-col">
                         <div className="shrink-0 flex justify-end px-4 py-2 bg-white border-b border-[#ebebeb] z-10">
                             <button
                                 type="button"
-                                onClick={() => setMapMode('walk')}
+                                onClick={() => setGuidedPath(true)}
                                 className="text-xs text-[#1a0dab] hover:underline"
                             >
-                                Guided rabbit hole
+                                Guided path (step-by-step)
                             </button>
                         </div>
                         <div className="flex-1 min-h-0 relative">
@@ -207,9 +181,32 @@ export default function TopicPage() {
                         </div>
                     </div>
                 )}
+
+                {!loading && graphData && view === 'map' && guidedPath && (
+                    <div className="absolute inset-0 flex flex-col">
+                        <div className="shrink-0 flex justify-end px-4 py-2 bg-white border-b border-[#ebebeb]">
+                            <button
+                                type="button"
+                                onClick={() => setGuidedPath(false)}
+                                className="text-xs text-[#1a0dab] hover:underline"
+                            >
+                                Mind map
+                            </button>
+                        </div>
+                        <div className="flex-1 min-h-0">
+                            <RabbitHoleWalkView
+                                data={graphData}
+                                displayQuery={graphData.displayQuery || query}
+                                onFollowBranch={() => {}}
+                                onOpenNewTopic={(q: string) => void runSearch(q, 'trail')}
+                                onShowAnswer={() => setView('answer')}
+                            />
+                        </div>
+                    </div>
+                )}
             </div>
 
-            {selectedNode && view === 'map' && (
+            {selectedNode && view === 'map' && !guidedPath && (
                 <NodeDetailsPanel
                     node={selectedNode}
                     onClose={() => setSelectedNode(null)}
