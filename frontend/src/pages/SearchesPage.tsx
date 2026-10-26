@@ -49,10 +49,13 @@ export default function SearchesPage() {
             </header>
 
             <main className="flex-1 max-w-2xl w-full mx-auto px-4 sm:px-6 py-8">
-                <h1 className="text-2xl font-normal text-[#202124] mb-2">Latest searches</h1>
+                <h1 className="text-2xl font-normal text-[#202124] mb-2">Questions people asked</h1>
                 <p className="text-sm text-[#70757a] mb-6">
-                    What people looked up recently on Rabbit Hole. Open any question to read the shared answer and help in
-                    the discussion.
+                    Each topic appears once (newest activity wins). For multi-step trails across topics, see{' '}
+                    <Link to="/holes" className="text-[#1a0dab] hover:underline">
+                        rabbit hole stories
+                    </Link>
+                    .
                 </p>
 
                 {error && (
