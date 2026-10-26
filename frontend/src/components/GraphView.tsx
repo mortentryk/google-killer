@@ -18,8 +18,18 @@ export function GraphView({ data, onNodeClick }: Props) {
         return data.nodes.map((n, i) => ({
             id: n.id,
             data: { label: n.title, original: n },
-            position: { x: i * 250, y: i * 100 + (i % 2 === 0 ? 0 : 50) }, // Simple staggered layout
-            className: 'bg-surface border-2 border-primary text-text rounded-xl p-3 shadow-lg w-48 text-center text-sm font-medium hover:scale-105 transition-transform',
+            position: { x: (i % 3) * 260, y: Math.floor(i / 3) * 120 + (i % 2 === 0 ? 0 : 40) },
+            style: {
+                background: '#fff',
+                border: '1px solid #dadce0',
+                borderRadius: '12px',
+                padding: '10px 14px',
+                width: 180,
+                fontSize: 13,
+                fontWeight: 500,
+                color: '#202124',
+                boxShadow: '0 1px 3px rgba(60,64,67,.15)',
+            },
         }));
     }, [data.nodes]);
 
@@ -28,21 +38,26 @@ export function GraphView({ data, onNodeClick }: Props) {
             id: e.id,
             source: e.fromNodeId,
             target: e.toNodeId,
-            animated: true,
-            style: { stroke: '#6c63ff', strokeWidth: 2 },
+            animated: false,
+            style: { stroke: '#4285F4', strokeWidth: 1.5 },
         }));
     }, [data.edges]);
 
+    if (data.nodes.length === 0) {
+        return <div className="w-full h-full min-h-[400px] bg-[#f8f9fa]" />;
+    }
+
     return (
-        <div className="w-full h-full bg-background">
+        <div className="w-full h-full min-h-[calc(100vh-120px)] bg-[#f8f9fa]">
             <ReactFlow
                 nodes={nodes}
                 edges={edges}
                 onNodeClick={(_, node) => onNodeClick(node.data.original)}
                 fitView
+                fitViewOptions={{ padding: 0.2 }}
             >
-                <Background color="#2f2f3a" gap={20} size={1} />
-                <Controls className="bg-surface border-gray-700 fill-text" />
+                <Background color="#dadce0" gap={24} size={1} />
+                <Controls className="!bg-white !border-[#dadce0] !shadow-sm" />
             </ReactFlow>
         </div>
     );
