@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { appendJourneyStep, createJourney, getJourney } from '../api/client';
 import { JourneyStep, RabbitHoleStory } from '../types';
+import { compactTrailSteps, isHubTrailStep } from '../utils/trailRules';
 
 const STORAGE_KEY = 'rabbithole.journeyId';
 
@@ -37,7 +38,7 @@ export function RabbitHoleProvider({ children }: { children: React.ReactNode }) 
         }
         setJourneyId(story.id);
         sessionStorage.setItem(STORAGE_KEY, story.id);
-        setSteps(story.steps);
+        setSteps(compactTrailSteps(story.steps));
     }, []);
 
     const refresh = useCallback(async () => {
@@ -87,19 +88,18 @@ export function RabbitHoleProvider({ children }: { children: React.ReactNode }) 
 
     const recordVisit = useCallback(
         async (input: RecordInput) => {
+            if (isHubTrailStep(input.slug, input.displayQuery)) return;
+
             const id = await ensureJourneyId();
             if (!id) return;
 
             const last = steps[steps.length - 1];
             if (last?.slug === input.slug) return;
+            if (steps.some((s) => s.slug === input.slug)) return;
 
             try {
                 const step = await appendJourneyStep(id, input);
-                setSteps((prev) => {
-                    if (prev.some((s) => s.id === step.id)) return prev;
-                    if (prev.length > 0 && prev[prev.length - 1].slug === step.slug) return prev;
-                    return [...prev, step].sort((a, b) => a.order - b.order);
-                });
+                setSteps((prev) => compactTrailSteps([...prev, step].sort((a, b) => a.order - b.order)));
             } catch {
                 await refresh();
             }

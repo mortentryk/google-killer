@@ -9,6 +9,7 @@ interface Props {
 
 export function NodeDetailsPanel({ node, onClose, onFollowTrail }: Props) {
     const [activeTab, setActiveTab] = useState<'Answer' | 'Tools'>('Answer');
+    const isHubNode = node.title.trim().toLowerCase() === 'home';
 
     return (
         <div className="fixed right-0 bottom-0 md:top-[113px] md:bottom-0 h-[42vh] md:h-[calc(100%-113px)] w-full md:w-[400px] max-w-full bg-white border-t md:border-t-0 md:border-l border-[#ebebeb] shadow-lg z-40 flex flex-col rounded-t-xl md:rounded-none">
@@ -40,7 +41,7 @@ export function NodeDetailsPanel({ node, onClose, onFollowTrail }: Props) {
                 ))}
             </div>
 
-            {onFollowTrail && (
+            {onFollowTrail && !isHubNode && (
                 <div className="px-4 py-3 border-b border-[#ebebeb] bg-[#f8f9fa]">
                     <button
                         type="button"
@@ -53,6 +54,11 @@ export function NodeDetailsPanel({ node, onClose, onFollowTrail }: Props) {
                         Open this as its own question and keep going down the hole.
                     </p>
                 </div>
+            )}
+            {isHubNode && (
+                <p className="px-4 py-3 text-xs text-[#70757a] border-b border-[#ebebeb] bg-[#f8f9fa]">
+                    This is the map anchor, not a question — pick a branch topic instead.
+                </p>
             )}
 
             <div className="flex-1 overflow-y-auto p-5">

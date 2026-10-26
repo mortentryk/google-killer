@@ -4,6 +4,7 @@ import { Logo } from '../components/Logo';
 import { getJourney } from '../api/client';
 import { RabbitHoleStory } from '../types';
 import { formatRelativeTime } from '../utils/formatRelativeTime';
+import { compactTrailSteps } from '../utils/trailRules';
 
 export default function HoleStoryPage() {
     const { id } = useParams<{ id: string }>();
@@ -25,8 +26,9 @@ export default function HoleStoryPage() {
             .finally(() => setLoading(false));
     }, [id]);
 
-    const first = story?.steps[0];
-    const last = story?.steps[story.steps.length - 1];
+    const trail = story ? compactTrailSteps(story.steps) : [];
+    const first = trail[0];
+    const last = trail[trail.length - 1];
 
     return (
         <div className="min-h-screen bg-[#f8f9fa] text-[#202124]">
@@ -50,7 +52,7 @@ export default function HoleStoryPage() {
                 </h1>
                 {story && (
                     <p className="text-sm text-[#70757a] mb-6">
-                        {story.steps.length} stop{story.steps.length === 1 ? '' : 's'} · started{' '}
+                        {trail.length} stop{trail.length === 1 ? '' : 's'} · started{' '}
                         {formatRelativeTime(story.startedAt)}
                     </p>
                 )}
@@ -62,9 +64,9 @@ export default function HoleStoryPage() {
                     </p>
                 )}
 
-                {story && story.steps.length > 0 && (
+                {story && trail.length > 0 && (
                     <ol className="space-y-0 rounded-lg border border-[#ebebeb] bg-white overflow-hidden shadow-sm">
-                        {story.steps.map((step, index) => (
+                        {trail.map((step, index) => (
                             <li key={step.id} className="border-b border-[#ebebeb] last:border-b-0">
                                 <button
                                     type="button"
@@ -96,12 +98,12 @@ export default function HoleStoryPage() {
                     </ol>
                 )}
 
-                {story && story.steps.length > 0 && (
+                {story && trail.length > 0 && (
                     <div className="mt-6 flex flex-wrap gap-3">
                         <button
                             type="button"
                             onClick={() =>
-                                navigate(`/q/${encodeURIComponent(story.steps[0].slug)}`, { state: { skipRecord: true } })
+                                navigate(`/q/${encodeURIComponent(trail[0].slug)}`, { state: { skipRecord: true } })
                             }
                             className="text-sm bg-[#1a73e8] text-white px-4 py-2 rounded-md hover:bg-[#1765cc]"
                         >
@@ -111,7 +113,7 @@ export default function HoleStoryPage() {
                             type="button"
                             onClick={() =>
                                 navigate(
-                                    `/q/${encodeURIComponent(story.steps[story.steps.length - 1].slug)}?discuss=1`,
+                                    `/q/${encodeURIComponent(trail[trail.length - 1].slug)}?discuss=1`,
                                     { state: { skipRecord: true } }
                                 )
                             }

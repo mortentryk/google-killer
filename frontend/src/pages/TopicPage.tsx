@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ResultsHeader } from '../components/ResultsHeader';
 import { GraphView } from '../components/GraphView';
 import { NodeDetailsPanel } from '../components/NodeDetailsPanel';
@@ -14,7 +14,6 @@ export default function TopicPage() {
     const { slug } = useParams<{ slug: string }>();
     const [searchParams, setSearchParams] = useSearchParams();
     const navigate = useNavigate();
-    const location = useLocation();
     const { push } = useSearchHistory();
     const { recordVisit } = useRabbitHole();
 
@@ -80,32 +79,6 @@ export default function TopicPage() {
             .then(setPrimaryNode)
             .catch(() => setPrimaryNode(null));
     }, [graphData]);
-
-    useEffect(() => {
-        if (!graphData?.primaryNodeId || !graphData.slug) return;
-        const skipRecord = (location.state as { skipRecord?: boolean } | null)?.skipRecord;
-        if (skipRecord) {
-            navigate(location.pathname + location.search, { replace: true, state: {} });
-            return;
-        }
-        const displayQuery = graphData.displayQuery || query;
-        void recordVisit({
-            nodeId: graphData.primaryNodeId,
-            slug: graphData.slug,
-            displayQuery,
-            source: 'topic',
-        });
-    }, [
-        graphData?.primaryNodeId,
-        graphData?.slug,
-        graphData?.displayQuery,
-        query,
-        recordVisit,
-        location.pathname,
-        location.search,
-        location.state,
-        navigate,
-    ]);
 
     const runSearch = async (rawQuery: string, source: 'search' | 'trail' = 'search') => {
         const trimmed = rawQuery.trim();

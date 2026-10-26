@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useRabbitHole } from '../hooks/useRabbitHole';
+import { compactTrailSteps } from '../utils/trailRules';
 
 export function RabbitHoleTrail() {
     const { steps, sharePath, startNewHole } = useRabbitHole();
     const navigate = useNavigate();
     const [copied, setCopied] = useState(false);
 
-    if (steps.length === 0) {
+    const visibleSteps = compactTrailSteps(steps);
+
+    if (visibleSteps.length === 0) {
         return null;
     }
 
@@ -51,7 +54,7 @@ export function RabbitHoleTrail() {
                     )}
                 </div>
                 <ol className="flex flex-wrap items-center gap-1 min-w-0 text-sm list-none m-0 p-0">
-                    {steps.map((step, index) => (
+                    {visibleSteps.map((step, index) => (
                         <li key={step.id} className="flex items-center gap-1 min-w-0 max-w-full">
                             {index > 0 && <span className="text-[#dadce0] shrink-0">→</span>}
                             <button

@@ -1,4 +1,5 @@
 import prisma from '../db/client';
+import { isHubTrailStep } from './trailRules';
 
 const MAX_STEPS = 40;
 
@@ -33,6 +34,13 @@ export async function appendJourneyStep(journeyId: string, input: JourneyStepInp
         throw new Error('Journey not found');
     }
 
+    if (isHubTrailStep(slug, displayQuery)) {
+        return prisma.journeyStep.findFirst({
+            where: { journeyId },
+            orderBy: { order: 'desc' },
+        });
+    }
+
     const count = await prisma.journeyStep.count({ where: { journeyId } });
     if (count >= MAX_STEPS) {
         throw new Error('This rabbit hole is full (step limit reached)');
@@ -48,6 +56,14 @@ export async function appendJourneyStep(journeyId: string, input: JourneyStepInp
             where: { journeyId },
             orderBy: { order: 'desc' },
         });
+    }
+
+    const alreadyVisited = await prisma.journeyStep.findFirst({
+        where: { journeyId, slug },
+        orderBy: { order: 'asc' },
+    });
+    if (alreadyVisited) {
+        return alreadyVisited;
     }
 
     return prisma.journeyStep.create({
@@ -85,15 +101,21 @@ export async function listRecentHoles(limit: number): Promise<RecentHoleSummary[
     });
 
     return journeys
-        .filter((j) => j.steps.length >= 2)
         .map((j) => {
-            const first = j.steps[0];
-            const last = j.steps[j.steps.length - 1];
+            const cleaned = j.steps.filter(
+                (s) => !isHubTrailStep(s.slug, s.displayQuery)
+            );
+            return { journey: j, cleaned };
+        })
+        .filter(({ cleaned }) => cleaned.length >= 2)
+        .map(({ journey: j, cleaned }) => {
+            const first = cleaned[0];
+            const last = cleaned[cleaned.length - 1];
             return {
                 id: j.id,
                 startedAt: j.startedAt,
                 updatedAt: last.timestamp,
-                stepCount: j.steps.length,
+                stepCount: cleaned.length,
                 firstQuery: first.displayQuery,
                 lastQuery: last.displayQuery,
                 firstSlug: first.slug,
