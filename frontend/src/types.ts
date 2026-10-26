@@ -43,6 +43,8 @@ export interface GraphData {
     cached?: boolean;
     generated?: boolean;
     normalizedQuery?: string;
+    aiReviewed?: boolean;
+    reviewRevisionUsed?: boolean;
 }
 
 export interface Comment {

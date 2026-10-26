@@ -5,6 +5,7 @@ import prisma from './db/client';
 import { resolveSearch, resolveTopicBySlug } from './search/resolveSearch';
 import { listRecentSearches, recordSearchEvent } from './search/recentSearches';
 import { appendJourneyStep, createJourney, getJourneyPublic, listRecentHoles } from './journey/journeyService';
+import { isOpenAIConfigured } from './search/openaiJson';
 import { rateLimit } from './middleware/rateLimit';
 import { commentSpamGuard } from './middleware/commentSpam';
 import { linkSpamGuard } from './middleware/linkSpam';
@@ -33,7 +34,12 @@ app.get('/', (req, res) => {
 app.get('/health', async (_req, res) => {
     try {
         await prisma.$queryRaw`SELECT 1`;
-        res.json({ ok: true, version: 3, features: { journeys: true, recentSearches: true, holeFeed: true } });
+        res.json({
+            ok: true,
+            version: 4,
+            openaiConfigured: isOpenAIConfigured(),
+            features: { journeys: true, recentSearches: true, holeFeed: true, aiMindMap: true },
+        });
     } catch {
         res.status(503).json({ ok: false });
     }

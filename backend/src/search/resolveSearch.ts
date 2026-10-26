@@ -1,60 +1,11 @@
 import prisma from '../db/client';
-import { normalizeQuery, queryTokens } from './normalizeQuery';
+import { normalizeQuery } from './normalizeQuery';
 import { payloadForTopic } from './graph';
-import { createTopicFromGeneration } from './generateAnswer';
-import { persistTopic, aliasTopicToQuery } from './persistTopic';
+import { createTopicGraphFromGeneration } from './generateAnswer';
+import { aliasTopicToQuery, persistTopic } from './persistTopic';
 import { findSimilarTopic } from './similarQuery';
 
-const MIN_SEED_SCORE = 20;
 const MAX_QUERY_LENGTH = 500;
-
-function scoreNode(
-    title: string,
-    aiSummary: string,
-    tokens: string[],
-    normalized: string
-): number {
-    const haystack = `${title} ${aiSummary}`.toLowerCase();
-    let score = 0;
-    if (title.toLowerCase() === normalized) score += 100;
-    if (title.toLowerCase().includes(normalized)) score += 40;
-    for (const token of tokens) {
-        if (haystack.includes(token)) score += 10;
-    }
-    if (title.toLowerCase().includes(normalized) || normalized.includes(title.toLowerCase())) {
-        score += 5;
-    }
-    const titleLower = title.toLowerCase();
-    const titleTokenHits = tokens.filter((t) => titleLower.includes(t)).length;
-    if (titleTokenHits === 0 && score < 45) {
-        return 0;
-    }
-    return score;
-}
-
-async function pickPrimaryNodeId(normalized: string): Promise<string | null> {
-    const tokens = queryTokens(normalized);
-    if (!normalized) return null;
-
-    const exactTitle = await prisma.node.findFirst({
-        where: { title: { equals: normalized, mode: 'insensitive' } },
-    });
-    if (exactTitle) return exactTitle.id;
-
-    const candidates = await prisma.node.findMany();
-    let bestId: string | null = null;
-    let bestScore = 0;
-
-    for (const node of candidates) {
-        const score = scoreNode(node.title, node.aiSummary, tokens, normalized);
-        if (score > bestScore) {
-            bestScore = score;
-            bestId = node.id;
-        }
-    }
-
-    return bestScore >= MIN_SEED_SCORE ? bestId : null;
-}
 
 export async function resolveSearch(rawQuery: string) {
     const trimmed = rawQuery.trim();
@@ -81,13 +32,13 @@ export async function resolveSearch(rawQuery: string) {
         return payloadForTopic(similar, { cached: true, generated: false });
     }
 
-    const seedNodeId = await pickPrimaryNodeId(normalizedQuery);
-    if (seedNodeId) {
-        return persistTopic(trimmed, normalizedQuery, seedNodeId, { generated: false });
-    }
-
-    const primaryNodeId = await createTopicFromGeneration(trimmed);
-    return persistTopic(trimmed, normalizedQuery, primaryNodeId, { generated: true });
+    const created = await createTopicGraphFromGeneration(trimmed);
+    return persistTopic(trimmed, normalizedQuery, created.primaryNodeId, {
+        generated: true,
+        reviewedAt: created.reviewedAt,
+        reviewRevisionUsed: created.reviewRevisionUsed,
+        generationMeta: created.generationMeta,
+    });
 }
 
 export async function resolveTopicBySlug(slug: string) {

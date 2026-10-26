@@ -36,5 +36,7 @@ export function parseGraphPayload(raw: Record<string, unknown>) {
         cached: Boolean(raw.cached),
         generated: Boolean(raw.generated),
         normalizedQuery: typeof raw.normalizedQuery === 'string' ? raw.normalizedQuery : '',
+        aiReviewed: Boolean(raw.aiReviewed),
+        reviewRevisionUsed: Boolean(raw.reviewRevisionUsed),
     };
 }

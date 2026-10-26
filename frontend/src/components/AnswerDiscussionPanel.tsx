@@ -9,6 +9,7 @@ interface Props {
     slug: string;
     cached?: boolean;
     generated?: boolean;
+    aiReviewed?: boolean;
     focusDiscussion?: boolean;
 }
 
@@ -18,6 +19,7 @@ export function AnswerDiscussionPanel({
     slug,
     cached,
     generated,
+    aiReviewed,
     focusDiscussion,
 }: Props) {
     return (
@@ -29,6 +31,7 @@ export function AnswerDiscussionPanel({
                     slug={slug}
                     cached={cached}
                     generated={generated}
+                    aiReviewed={aiReviewed}
                     embedded
                 />
             </section>

@@ -150,7 +150,9 @@ export default function TopicPage() {
                 {loading && (
                     <div className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-white/80">
                         <div className="w-10 h-10 border-2 border-[#4285F4] border-t-transparent rounded-full animate-spin" />
-                        <p className="mt-4 text-sm text-[#70757a]">Loading shared result…</p>
+                        <p className="mt-4 text-sm text-[#70757a]">
+                            Loading shared result…
+                        </p>
                     </div>
                 )}
 
@@ -161,6 +163,7 @@ export default function TopicPage() {
                         slug={graphData.slug}
                         cached={graphData.cached}
                         generated={graphData.generated}
+                        aiReviewed={graphData.aiReviewed}
                         focusDiscussion={focusDiscussion && !loading && !!primaryNode}
                     />
                 )}

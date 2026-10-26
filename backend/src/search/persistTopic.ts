@@ -2,6 +2,7 @@ import { Prisma } from '@prisma/client';
 import prisma from '../db/client';
 import { payloadForTopic } from './graph';
 import { slugify, slugWithSuffix } from './slug';
+import { GenerationMeta } from './topicGraphTypes';
 
 function isUniqueViolation(error: unknown): boolean {
     return (
@@ -15,6 +16,9 @@ async function createTopicRecord(
         normalizedQuery: string;
         displayQuery: string;
         primaryNodeId: string;
+        reviewedAt?: Date;
+        reviewRevisionUsed?: boolean;
+        generationMeta?: GenerationMeta;
     }
 ) {
     const baseSlug = slugify(data.normalizedQuery);
@@ -27,6 +31,11 @@ async function createTopicRecord(
                     normalizedQuery: data.normalizedQuery,
                     displayQuery: data.displayQuery,
                     primaryNodeId: data.primaryNodeId,
+                    reviewedAt: data.reviewedAt ?? null,
+                    reviewRevisionUsed: data.reviewRevisionUsed ?? false,
+                    generationMeta: data.generationMeta
+                        ? (data.generationMeta as Prisma.InputJsonValue)
+                        : undefined,
                 },
             });
         } catch (error) {
@@ -42,11 +51,18 @@ async function createTopicRecord(
     throw new Error('Could not allocate a unique slug');
 }
 
+export type PersistTopicFlags = {
+    generated: boolean;
+    reviewedAt?: Date;
+    reviewRevisionUsed?: boolean;
+    generationMeta?: GenerationMeta;
+};
+
 export async function persistTopic(
     displayQuery: string,
     normalizedQuery: string,
     primaryNodeId: string,
-    flags: { generated: boolean }
+    flags: PersistTopicFlags
 ) {
     return prisma.$transaction(async (tx) => {
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${normalizedQuery}))`;
@@ -62,6 +78,9 @@ export async function persistTopic(
             normalizedQuery,
             displayQuery: displayQuery.trim(),
             primaryNodeId,
+            reviewedAt: flags.reviewedAt,
+            reviewRevisionUsed: flags.reviewRevisionUsed,
+            generationMeta: flags.generationMeta,
         });
 
         return payloadForTopic(topic, {

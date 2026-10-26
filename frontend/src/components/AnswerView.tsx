@@ -8,10 +8,11 @@ interface Props {
     slug: string;
     cached?: boolean;
     generated?: boolean;
+    aiReviewed?: boolean;
     embedded?: boolean;
 }
 
-export function AnswerView({ node, displayQuery, slug, cached, generated, embedded }: Props) {
+export function AnswerView({ node, displayQuery, slug, cached, generated, aiReviewed, embedded }: Props) {
     const shareUrl =
         typeof window !== 'undefined' ? `${window.location.origin}/q/${slug}` : `/q/${slug}`;
 
@@ -20,6 +21,7 @@ export function AnswerView({ node, displayQuery, slug, cached, generated, embedd
             <p className="text-xs text-[#70757a] mb-1">
                 Shared AI answer
                 {cached ? ' · saved for everyone' : generated ? ' · generated once' : ''}
+                {aiReviewed ? ' · AI reviewed' : ''}
             </p>
             <h1 className="text-2xl text-[#202124] font-normal mb-2">{node.title}</h1>
             <p className="text-sm text-[#70757a] mb-4">
