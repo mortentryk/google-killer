@@ -5,11 +5,19 @@ export type GraphPayload = {
     nodes: Node[];
     edges: Edge[];
     path: string[];
+    slug: string;
+    displayQuery: string;
+    primaryNodeId: string;
     cached: boolean;
+    generated: boolean;
     normalizedQuery: string;
 };
 
-export async function connectedSubgraph(primaryNodeId: string): Promise<Omit<GraphPayload, 'cached' | 'normalizedQuery'>> {
+export async function connectedSubgraph(primaryNodeId: string): Promise<{
+    nodes: Node[];
+    edges: Edge[];
+    path: string[];
+}> {
     const allEdges = await prisma.edge.findMany();
     const nodeIds = new Set<string>([primaryNodeId]);
 
@@ -39,5 +47,26 @@ export async function connectedSubgraph(primaryNodeId: string): Promise<Omit<Gra
         nodes,
         edges,
         path: [primaryNodeId],
+    };
+}
+
+export async function payloadForTopic(
+    topic: {
+        slug: string;
+        displayQuery: string;
+        normalizedQuery: string;
+        primaryNodeId: string;
+    },
+    flags: { cached: boolean; generated: boolean }
+): Promise<GraphPayload> {
+    const graph = await connectedSubgraph(topic.primaryNodeId);
+    return {
+        ...graph,
+        slug: topic.slug,
+        displayQuery: topic.displayQuery,
+        primaryNodeId: topic.primaryNodeId,
+        normalizedQuery: topic.normalizedQuery,
+        cached: flags.cached,
+        generated: flags.generated,
     };
 }

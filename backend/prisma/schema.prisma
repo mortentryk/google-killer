@@ -54,7 +54,9 @@ model Node {
 
 model SearchTopic {
   id              String   @id @default(uuid())
+  slug            String   @unique
   normalizedQuery String   @unique
+  displayQuery    String
   primaryNodeId   String
   createdAt       DateTime @default(now())
 

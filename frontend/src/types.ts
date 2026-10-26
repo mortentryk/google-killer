@@ -31,11 +31,17 @@ export interface Edge {
     relationType: string;
 }
 
+export type ResultView = 'answer' | 'map' | 'discussion';
+
 export interface GraphData {
     nodes: Node[];
     edges: Edge[];
-    path: string[]; // List of Node IDs in the path
+    path: string[];
+    slug?: string;
+    displayQuery?: string;
+    primaryNodeId?: string;
     cached?: boolean;
+    generated?: boolean;
     normalizedQuery?: string;
 }
 

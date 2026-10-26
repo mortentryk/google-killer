@@ -1,6 +1,10 @@
 import prisma from '../db/client';
 import { normalizeQuery, queryTokens } from './normalizeQuery';
-import { connectedSubgraph, GraphPayload } from './graph';
+import { payloadForTopic } from './graph';
+import { allocateSlug } from './slug';
+import { createTopicFromGeneration } from './generateAnswer';
+
+const MIN_SEED_SCORE = 20;
 
 function scoreNode(
     title: string,
@@ -17,6 +21,11 @@ function scoreNode(
     }
     if (title.toLowerCase().includes(normalized) || normalized.includes(title.toLowerCase())) {
         score += 5;
+    }
+    const titleLower = title.toLowerCase();
+    const titleTokenHits = tokens.filter((t) => titleLower.includes(t)).length;
+    if (titleTokenHits === 0 && score < 45) {
+        return 0;
     }
     return score;
 }
@@ -37,10 +46,27 @@ async function pickPrimaryNodeId(normalized: string): Promise<string | null> {
         }
     }
 
-    return bestScore > 0 ? bestId : null;
+    return bestScore >= MIN_SEED_SCORE ? bestId : null;
 }
 
-export async function resolveSearch(rawQuery: string): Promise<GraphPayload | null> {
+async function cacheSeedTopic(
+    rawQuery: string,
+    normalizedQuery: string,
+    primaryNodeId: string
+) {
+    const slug = await allocateSlug(normalizedQuery);
+    await prisma.searchTopic.create({
+        data: {
+            slug,
+            normalizedQuery,
+            displayQuery: rawQuery.trim(),
+            primaryNodeId,
+        },
+    });
+    return slug;
+}
+
+export async function resolveSearch(rawQuery: string) {
     const normalizedQuery = normalizeQuery(rawQuery);
     if (!normalizedQuery) return null;
 
@@ -49,28 +75,28 @@ export async function resolveSearch(rawQuery: string): Promise<GraphPayload | nu
     });
 
     if (existing) {
-        const graph = await connectedSubgraph(existing.primaryNodeId);
-        return {
-            ...graph,
-            cached: true,
-            normalizedQuery,
-        };
+        return payloadForTopic(existing, { cached: true, generated: false });
     }
 
-    const primaryNodeId = await pickPrimaryNodeId(normalizedQuery);
-    if (!primaryNodeId) return null;
+    const seedNodeId = await pickPrimaryNodeId(normalizedQuery);
+    if (seedNodeId) {
+        await cacheSeedTopic(rawQuery, normalizedQuery, seedNodeId);
+        const topic = await prisma.searchTopic.findUniqueOrThrow({
+            where: { normalizedQuery },
+        });
+        return payloadForTopic(topic, { cached: false, generated: false });
+    }
 
-    await prisma.searchTopic.create({
-        data: {
-            normalizedQuery,
-            primaryNodeId,
-        },
+    const slug = await allocateSlug(normalizedQuery);
+    const primaryNodeId = await createTopicFromGeneration(rawQuery, normalizedQuery, slug);
+    const topic = await prisma.searchTopic.findUniqueOrThrow({
+        where: { normalizedQuery },
     });
+    return payloadForTopic(topic, { cached: false, generated: true });
+}
 
-    const graph = await connectedSubgraph(primaryNodeId);
-    return {
-        ...graph,
-        cached: false,
-        normalizedQuery,
-    };
+export async function resolveTopicBySlug(slug: string) {
+    const topic = await prisma.searchTopic.findUnique({ where: { slug } });
+    if (!topic) return null;
+    return payloadForTopic(topic, { cached: true, generated: false });
 }

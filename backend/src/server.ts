@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import prisma from './db/client';
-import { resolveSearch } from './search/resolveSearch';
+import { resolveSearch, resolveTopicBySlug } from './search/resolveSearch';
 
 dotenv.config();
 
@@ -26,15 +26,24 @@ app.get('/search', async (req, res) => {
     try {
         const result = await resolveSearch(q);
         if (!result) {
-            res.status(404).json({
-                error: 'No stored answer for this question yet',
-                nodes: [],
-                edges: [],
-                path: [],
-            });
+            res.status(400).json({ error: 'Enter a search query' });
             return;
         }
+        res.json(result);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
 
+app.get('/topics/:slug', async (req, res) => {
+    const { slug } = req.params;
+    try {
+        const result = await resolveTopicBySlug(slug);
+        if (!result) {
+            res.status(404).json({ error: 'Topic not found' });
+            return;
+        }
         res.json(result);
     } catch (error) {
         console.error(error);
