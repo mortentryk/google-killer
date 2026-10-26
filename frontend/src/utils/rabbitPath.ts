@@ -76,3 +76,38 @@ export function getNextBranchChoices(currentNodeId: string, data: GraphData, vis
 export function getFallbackExploreChoices(currentNodeId: string, data: GraphData): Node[] {
     return data.nodes.filter((n) => !isHubNode(n) && n.id !== currentNodeId);
 }
+
+/** Order for cinematic mind-map reveal: approach spine first, then BFS branches. */
+export function buildMindMapRevealOrder(data: GraphData): string[] {
+    const spine = buildApproachChain(data);
+    const order: string[] = [];
+    const seen = new Set<string>();
+
+    for (const node of spine) {
+        if (!seen.has(node.id)) {
+            seen.add(node.id);
+            order.push(node.id);
+        }
+    }
+
+    const queue = [...order];
+    while (queue.length > 0) {
+        const id = queue.shift()!;
+        for (const childId of childrenOf(id, data.edges)) {
+            if (seen.has(childId)) continue;
+            const node = data.nodes.find((n) => n.id === childId);
+            if (!node || isHubNode(node)) continue;
+            seen.add(childId);
+            order.push(childId);
+            queue.push(childId);
+        }
+    }
+
+    for (const node of data.nodes) {
+        if (!isHubNode(node) && !seen.has(node.id)) {
+            order.push(node.id);
+        }
+    }
+
+    return order;
+}
