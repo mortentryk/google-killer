@@ -2,6 +2,7 @@ import prisma from '../db/client';
 import { normalizeQuery } from './normalizeQuery';
 import { payloadForTopic } from './graph';
 import { createTopicGraphFromGeneration } from './generateAnswer';
+import { intentSignature } from './intent';
 import { aliasTopicToQuery, persistTopic } from './persistTopic';
 import { findSimilarTopic } from './similarQuery';
 
@@ -22,6 +23,16 @@ export async function resolveSearch(rawQuery: string) {
     });
     if (existing) {
         return payloadForTopic(existing, { cached: true, generated: false });
+    }
+
+    const signature = intentSignature(trimmed);
+    if (signature) {
+        const byIntent = await prisma.searchTopic.findUnique({
+            where: { intentSignature: signature },
+        });
+        if (byIntent) {
+            return payloadForTopic(byIntent, { cached: true, generated: false });
+        }
     }
 
     const similar = await findSimilarTopic(normalizedQuery);

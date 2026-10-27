@@ -1,13 +1,20 @@
 import { Prisma } from '@prisma/client';
 import prisma from '../db/client';
 import { payloadForTopic } from './graph';
+import { intentSignature } from './intent';
 import { slugify, slugWithSuffix } from './slug';
 import { GenerationMeta } from './topicGraphTypes';
 
-function isUniqueViolation(error: unknown): boolean {
+function isUniqueViolation(error: unknown): error is Prisma.PrismaClientKnownRequestError {
     return (
         error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002'
     );
+}
+
+function uniqueTarget(error: Prisma.PrismaClientKnownRequestError): string {
+    const target = error.meta?.target;
+    if (Array.isArray(target)) return target.map(String).join(' ');
+    return typeof target === 'string' ? target : '';
 }
 
 async function createTopicRecord(
@@ -15,6 +22,7 @@ async function createTopicRecord(
     data: {
         normalizedQuery: string;
         displayQuery: string;
+        intentSignature: string | null;
         primaryNodeId: string;
         reviewedAt?: Date;
         reviewRevisionUsed?: boolean;
@@ -29,6 +37,7 @@ async function createTopicRecord(
                 data: {
                     slug,
                     normalizedQuery: data.normalizedQuery,
+                    intentSignature: data.intentSignature,
                     displayQuery: data.displayQuery,
                     primaryNodeId: data.primaryNodeId,
                     reviewedAt: data.reviewedAt ?? null,
@@ -40,10 +49,15 @@ async function createTopicRecord(
             });
         } catch (error) {
             if (!isUniqueViolation(error)) throw error;
-            const target = (error as Prisma.PrismaClientKnownRequestError).meta?.target;
-            if (Array.isArray(target) && target.includes('normalizedQuery')) {
+            const target = uniqueTarget(error);
+            if (target.includes('normalizedQuery')) {
                 return tx.searchTopic.findUniqueOrThrow({
                     where: { normalizedQuery: data.normalizedQuery },
+                });
+            }
+            if (target.includes('intentSignature') && data.intentSignature) {
+                return tx.searchTopic.findUniqueOrThrow({
+                    where: { intentSignature: data.intentSignature },
                 });
             }
         }
@@ -64,8 +78,19 @@ export async function persistTopic(
     primaryNodeId: string,
     flags: PersistTopicFlags
 ) {
+    const signature = intentSignature(displayQuery);
+
     return prisma.$transaction(async (tx) => {
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${normalizedQuery}))`;
+        if (signature) {
+            await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`intent:${signature}`}))`;
+            const byIntent = await tx.searchTopic.findUnique({
+                where: { intentSignature: signature },
+            });
+            if (byIntent) {
+                return payloadForTopic(byIntent, { cached: true, generated: false });
+            }
+        }
 
         const existing = await tx.searchTopic.findUnique({
             where: { normalizedQuery },
@@ -77,6 +102,7 @@ export async function persistTopic(
         const topic = await createTopicRecord(tx, {
             normalizedQuery,
             displayQuery: displayQuery.trim(),
+            intentSignature: signature,
             primaryNodeId,
             reviewedAt: flags.reviewedAt,
             reviewRevisionUsed: flags.reviewRevisionUsed,

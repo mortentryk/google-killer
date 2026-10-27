@@ -57,6 +57,7 @@ model SearchTopic {
   id                   String    @id @default(uuid())
   slug                 String    @unique
   normalizedQuery      String    @unique
+  intentSignature      String?   @unique
   displayQuery         String
   primaryNodeId        String
   reviewedAt           DateTime?
