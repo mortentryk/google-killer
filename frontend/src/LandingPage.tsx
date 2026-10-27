@@ -8,7 +8,7 @@ export default function LandingPage() {
 
   // Load search history from localStorage
   useEffect(() => {
-    const history = JSON.parse(localStorage.getItem("searchHistory")) || [];
+    const history = JSON.parse(localStorage.getItem("searchHistory") ?? "[]");
     setSearchHistory(history);
   }, []);
 
