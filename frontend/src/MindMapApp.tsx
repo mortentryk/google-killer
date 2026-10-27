@@ -20,7 +20,7 @@ export default function MindMapApp() {
 
   // Load search history
   useEffect(() => {
-    const history = JSON.parse(localStorage.getItem("searchHistory")) || [];
+    const history = JSON.parse(localStorage.getItem("searchHistory") ?? "[]");
     setSearchHistory(history);
   }, []);
 

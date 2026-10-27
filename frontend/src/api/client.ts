@@ -1,6 +1,6 @@
 import { GraphData, Node } from '../types';
 
-const API_URL = 'http://localhost:3001';
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
 export async function searchNodes(query: string): Promise<GraphData> {
     // Mock response for now if API fails or is not ready
