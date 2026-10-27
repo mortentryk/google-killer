@@ -3,13 +3,17 @@ import { PrismaClient, Category, RelationType } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function main() {
-    // Clean up existing data
+    await prisma.searchQuery.deleteMany();
     await prisma.edge.deleteMany();
+    await prisma.journeyStep.deleteMany();
+    await prisma.comment.deleteMany();
+    await prisma.video.deleteMany();
     await prisma.node.deleteMany();
+    await prisma.rabbitHole.deleteMany();
 
-    // Create some nodes
     const home = await prisma.node.create({
         data: {
+            slug: 'home',
             title: 'Home',
             category: Category.GENERAL,
             aiSummary: 'The starting point for all home improvement tasks.',
@@ -18,12 +22,13 @@ async function main() {
             materials: [],
             commonMistakes: [],
             timeEstimate: '',
-            costEstimate: ''
-        }
+            costEstimate: '',
+        },
     });
 
     const plumbing = await prisma.node.create({
         data: {
+            slug: 'plumbing',
             title: 'Plumbing',
             category: Category.PLUMBING,
             aiSummary: 'Everything related to pipes, water, and drainage.',
@@ -32,12 +37,13 @@ async function main() {
             materials: [],
             commonMistakes: [],
             timeEstimate: '',
-            costEstimate: ''
-        }
+            costEstimate: '',
+        },
     });
 
     const radiator = await prisma.node.create({
         data: {
+            slug: 'radiator',
             title: 'Radiator',
             category: Category.PLUMBING,
             aiSummary: 'Heating unit that warms the room.',
@@ -46,12 +52,13 @@ async function main() {
             materials: [],
             commonMistakes: [],
             timeEstimate: '',
-            costEstimate: ''
-        }
+            costEstimate: '',
+        },
     });
 
     const leak = await prisma.node.create({
         data: {
+            slug: 'fix-leaking-radiator',
             title: 'Fix Leaking Radiator',
             category: Category.PLUMBING,
             aiSummary: 'How to diagnose and fix a leaking radiator.',
@@ -61,33 +68,32 @@ async function main() {
             commonMistakes: ['Overtightening the nut', 'Not turning off the water'],
             difficulty: 3,
             timeEstimate: '1 hour',
-            costEstimate: '200 DKK'
-        }
+            costEstimate: '200 DKK',
+        },
     });
 
-    // Create edges
     await prisma.edge.create({
         data: {
             fromNodeId: home.id,
             toNodeId: plumbing.id,
-            relationType: RelationType.CHILD
-        }
+            relationType: RelationType.CHILD,
+        },
     });
 
     await prisma.edge.create({
         data: {
             fromNodeId: plumbing.id,
             toNodeId: radiator.id,
-            relationType: RelationType.CHILD
-        }
+            relationType: RelationType.CHILD,
+        },
     });
 
     await prisma.edge.create({
         data: {
             fromNodeId: radiator.id,
             toNodeId: leak.id,
-            relationType: RelationType.CHILD
-        }
+            relationType: RelationType.CHILD,
+        },
     });
 
     console.log('Seeding completed.');

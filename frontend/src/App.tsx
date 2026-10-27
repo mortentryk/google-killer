@@ -9,11 +9,13 @@ export default function App() {
   const [graphData, setGraphData] = useState<GraphData>({ nodes: [], edges: [], path: [] });
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [loading, setLoading] = useState(false);
+  const [searched, setSearched] = useState(false);
 
   const handleSearch = async (query: string) => {
     setLoading(true);
     try {
       const data = await searchNodes(query);
+      setSearched(true);
       setGraphData(data);
       // Auto-select the last node in the path if available
       if (data.path.length > 0) {
@@ -45,6 +47,11 @@ export default function App() {
           data={graphData}
           onNodeClick={setSelectedNode}
         />
+        {searched && !loading && graphData.nodes.length === 0 && (
+          <div className="absolute inset-0 flex items-center justify-center text-textSecondary pointer-events-none">
+            No rabbit hole for that yet.
+          </div>
+        )}
       </div>
 
       {selectedNode && (

@@ -47,8 +47,38 @@ model Node {
   videos        Video[]
   journeySteps  JourneyStep[]
 
+  slug         String?  @unique
+  rabbitHoleId String?
+  rabbitHole   RabbitHole? @relation(fields: [rabbitHoleId], references: [id], onDelete: SetNull)
+
   @@index([title])
   @@index([category])
+  @@index([rabbitHoleId])
+}
+
+model RabbitHole {
+  id          String   @id @default(uuid())
+  slug        String   @unique
+  title       String
+  seedQuery   String?
+  focusNodeId String?
+  createdAt   DateTime @default(now())
+
+  nodes         Node[]
+  searchQueries SearchQuery[]
+}
+
+model SearchQuery {
+  id              String   @id @default(uuid())
+  text            String
+  intentSignature String
+  rabbitHoleId    String
+  createdAt       DateTime @default(now())
+
+  rabbitHole RabbitHole @relation(fields: [rabbitHoleId], references: [id], onDelete: Cascade)
+
+  @@index([intentSignature])
+  @@index([rabbitHoleId])
 }
 
 model Edge {

@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import prisma from './db/client';
+import { resolveSearch } from './resolveSearch';
 
 dotenv.config();
 
@@ -23,40 +24,12 @@ app.get('/search', async (req, res) => {
     }
 
     try {
-        const nodes = await prisma.node.findMany({
-            where: {
-                OR: [
-                    { title: { contains: q, mode: 'insensitive' } },
-                    { aiSummary: { contains: q, mode: 'insensitive' } }
-                ]
-            },
-            take: 5
-        });
-
-        const edges = await prisma.edge.findMany({
-            where: {
-                OR: [
-                    { fromNodeId: { in: nodes.map(n => n.id) } },
-                    { toNodeId: { in: nodes.map(n => n.id) } }
-                ]
-            }
-        });
-
-        const connectedNodeIds = new Set<string>();
-        edges.forEach(e => {
-            connectedNodeIds.add(e.fromNodeId);
-            connectedNodeIds.add(e.toNodeId);
-        });
-        nodes.forEach(n => connectedNodeIds.add(n.id));
-
-        const allNodes = await prisma.node.findMany({
-            where: { id: { in: Array.from(connectedNodeIds) } }
-        });
-
+        const result = await resolveSearch(q);
         res.json({
-            nodes: allNodes,
-            edges: edges,
-            path: nodes.length > 0 ? [nodes[0].id] : []
+            nodes: result.nodes,
+            edges: result.edges,
+            path: result.path,
+            meta: { matched: result.matched, rabbitHoleId: result.rabbitHoleId },
         });
     } catch (error) {
         console.error(error);
