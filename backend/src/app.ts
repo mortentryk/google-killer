@@ -8,11 +8,13 @@ export function createApp() {
     app.use(cors());
     app.use(express.json());
 
-    app.get('/', (_req, res) => {
+    const api = express.Router();
+
+    api.get('/', (_req, res) => {
         res.send('Antigravity API is running');
     });
 
-    app.get('/search', async (req, res) => {
+    api.get('/search', async (req, res) => {
         const { q } = req.query;
         if (!q || typeof q !== 'string') {
             res.status(400).json({ error: 'Query parameter q is required' });
@@ -33,7 +35,7 @@ export function createApp() {
         }
     });
 
-    app.get('/nodes/:id', async (req, res) => {
+    api.get('/nodes/:id', async (req, res) => {
         const { id } = req.params;
         try {
             const node = await prisma.node.findUnique({ where: { id } });
@@ -47,6 +49,8 @@ export function createApp() {
             res.status(500).json({ error: 'Internal server error' });
         }
     });
+
+    app.use('/api', api);
 
     return app;
 }

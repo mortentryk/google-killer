@@ -18,7 +18,26 @@ Mind-map search: **route in the database (zero LLM tokens)**, **generate once** 
 
 Repeat searches never call these — they only load from the DB.
 
-## Backend
+## Vercel Services (Beta)
+
+One project, two services — see root [`vercel.json`](vercel.json):
+
+| Service | Public? | Path |
+|---------|---------|------|
+| **frontend** | yes | `/` (SPA) |
+| **backend** | yes | `/api/*` only (Express) |
+
+The React app calls **`/api/search`** and **`/api/nodes/:id`** on the same domain (no binding needed in the browser).
+
+Local all-in-one: `npx vercel dev` from repo root, or:
+
+```bash
+npm run dev
+```
+
+Set Vercel project env: `DATABASE_URL`, `OPENAI_API_KEY`, optional writer/reviewer models.
+
+## Backend (local)
 
 ```bash
 cd backend
@@ -27,14 +46,18 @@ npx prisma migrate deploy
 npm run dev
 ```
 
-Optional: set `OPENAI_API_KEY` in `.env`. Defaults: `OPENAI_WRITER_MODEL=gpt-4o-mini`, `OPENAI_REVIEWER_MODEL=gpt-4o` (override either in `.env`).
+API base: `http://localhost:3001/api`
 
-## Frontend
+Optional: set `OPENAI_API_KEY` in `.env`. Defaults: `OPENAI_WRITER_MODEL=gpt-4o-mini`, `OPENAI_REVIEWER_MODEL=gpt-4o`.
+
+## Frontend (local)
 
 ```bash
 cd frontend
 npm install
 npm start
 ```
+
+Uses `frontend/.env.development` → `REACT_APP_API_URL=http://localhost:3001/api`
 
 Search examples: `my radiator is dripping`, `Is the moon landing real?`

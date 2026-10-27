@@ -1,4 +1,4 @@
 import 'dotenv/config';
-import { createApp } from '../backend/src/app';
+import { createApp } from './app';
 
 export default createApp();

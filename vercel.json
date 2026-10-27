@@ -1,18 +1,32 @@
 {
-  "version": 2,
-  "buildCommand": "npm run vercel-build",
-  "installCommand": "npm run vercel-install",
-  "outputDirectory": "frontend/build",
-  "framework": "create-react-app",
-  "rewrites": [
-    { "source": "/search", "destination": "/api" },
-    { "source": "/nodes/(.*)", "destination": "/api" },
-    { "source": "/((?!static|api|search|nodes).*)", "destination": "/index.html" }
-  ],
-  "functions": {
-    "api/index.ts": {
-      "memory": 1024,
-      "maxDuration": 60
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "services": {
+    "backend": {
+      "root": "backend",
+      "framework": "express",
+      "entrypoint": "src/index.ts",
+      "installCommand": "npm install",
+      "buildCommand": "npm run build && npm run prisma:generate"
+    },
+    "frontend": {
+      "root": "frontend",
+      "framework": "create-react-app",
+      "installCommand": "npm install",
+      "buildCommand": "npm run build",
+      "outputDirectory": "build",
+      "rewrites": [
+        { "source": "/((?!static/).*)", "destination": "/index.html" }
+      ]
     }
-  }
+  },
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": { "service": "backend" }
+    },
+    {
+      "source": "/(.*)",
+      "destination": { "service": "frontend" }
+    }
+  ]
 }
