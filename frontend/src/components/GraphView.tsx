@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import ReactFlow, {
     Node as FlowNode,
     Edge as FlowEdge,
@@ -48,6 +48,9 @@ function layoutGraph(nodes: Node[], edges: Edge[], path: string[]) {
 
 export function GraphView({ data, onNodeClick }: Props) {
     const [showBranches, setShowBranches] = useState(false);
+    useEffect(() => {
+        setShowBranches(false);
+    }, [data.path.join('|'), data.meta?.rabbitHoleId]);
     const onPath = useMemo(() => new Set(data.path), [data.path]);
 
     const visibleNodes = useMemo(() => {
@@ -90,7 +93,7 @@ export function GraphView({ data, onNodeClick }: Props) {
     const hiddenCount = data.nodes.length - visibleNodes.length;
 
     return (
-        <div className="w-full h-full bg-background">
+        <div className="w-full h-full bg-background relative">
             {hiddenCount > 0 && (
                 <button
                     type="button"

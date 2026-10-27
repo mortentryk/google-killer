@@ -247,11 +247,15 @@ async function generateWithLock(query: string, signature: string): Promise<Searc
     }
 
     try {
-        const graph = await generateRabbitHoleGraph(query)
+        const { graph, audit } = await generateRabbitHoleGraph(query)
         const result = await persistGeneratedGraph(graph, holeId)
         await prisma.rabbitHole.update({
             where: { id: holeId },
-            data: { status: RabbitHoleStatus.READY, title: graph.title },
+            data: {
+                status: RabbitHoleStatus.READY,
+                title: graph.title,
+                generationAudit: audit,
+            },
         })
         await recordQuery(query, holeId)
         return { ...result, matched: 'generated' as const }
@@ -265,7 +269,7 @@ async function generateWithLock(query: string, signature: string): Promise<Searc
 }
 
 async function persistGeneratedGraph(
-    graph: Awaited<ReturnType<typeof generateRabbitHoleGraph>>,
+    graph: import('./generateHole').GeneratedGraph,
     rabbitHoleId: string,
 ) {
     const ids = new Map<string, string>()

@@ -6,7 +6,17 @@ Mind-map search: **route in the database (zero LLM tokens)**, **generate once** 
 
 1. Normalize query → `intentSignature` (stems + synonym groups).
 2. Hit an existing `SearchQuery` or fuzzy-match a hole’s vocabulary → load nodes from Postgres.
-3. On a true miss → one call to `generateRabbitHoleGraph` (OpenAI if `OPENAI_API_KEY` is set, else offline template), with a generation lock on `intentSignature`.
+3. On a true miss → **Writer → Reviewer → Overseer** pipeline (OpenAI if `OPENAI_API_KEY` is set, else offline template), with a generation lock on `intentSignature`.
+
+### Generation agents (first visit only)
+
+| Role | Job |
+|------|-----|
+| **Writer** | Drafts the mind-map JSON |
+| **Reviewer** | Checks answer fit, spine, safety; may patch the graph |
+| **Overseer** | Validates schema, accepts/rejects, sends revision notes (max rounds) |
+
+Repeat searches never call these — they only load from the DB.
 
 ## Backend
 

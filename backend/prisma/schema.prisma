@@ -70,6 +70,7 @@ model RabbitHole {
   intentSignature  String?          @unique
   status           RabbitHoleStatus @default(READY)
   focusNodeId      String?
+  generationAudit  Json?
   createdAt        DateTime         @default(now())
 
   nodes         Node[]
