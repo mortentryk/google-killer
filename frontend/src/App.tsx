@@ -30,10 +30,24 @@ export default function App() {
     }
   };
 
+  const pathLabels = graphData.path
+    .map((id) => graphData.nodes.find((n) => n.id === id)?.title)
+    .filter(Boolean);
+
   return (
     <div className="app w-full h-screen flex flex-col bg-background text-text overflow-hidden relative">
-      <div className="absolute top-0 left-0 w-full z-10 pt-4">
-        <SearchBar onSearch={handleSearch} />
+      <div className="absolute top-0 left-0 w-full z-10 pt-4 pointer-events-none">
+        <div className="pointer-events-auto">
+          <SearchBar onSearch={handleSearch} />
+        </div>
+        {pathLabels.length > 0 && (
+          <p className="text-center text-sm text-textSecondary mt-2 px-4 truncate">
+            Spine: {pathLabels.join(' → ')}
+            {graphData.meta?.matched && (
+              <span className="ml-2 text-xs opacity-70">({graphData.meta.matched})</span>
+            )}
+          </p>
+        )}
       </div>
 
       <div className="flex-1 relative h-full">

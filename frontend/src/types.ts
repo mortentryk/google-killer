@@ -31,8 +31,14 @@ export interface Edge {
     relationType: string;
 }
 
+export type SearchMatch = 'exact' | 'fuzzy' | 'discovered' | 'generated';
+
 export interface GraphData {
     nodes: Node[];
     edges: Edge[];
     path: string[]; // List of Node IDs in the path
+    meta?: {
+        matched?: SearchMatch;
+        rabbitHoleId?: string;
+    };
 }

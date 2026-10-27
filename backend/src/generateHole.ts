@@ -1,7 +1,6 @@
-/**
- * AI rabbit-hole generation hook.
- * Wire an LLM here to expand a search into nodes + edges; resolveSearch calls this on a true miss.
- */
+import { offlineGenerateRabbitHoleGraph } from './offlineGraph'
+import { openaiGenerateRabbitHoleGraph } from './openaiGraph'
+
 export type GeneratedGraph = {
     title: string
     nodes: {
@@ -20,6 +19,9 @@ export type GeneratedGraph = {
     focusSlug: string
 }
 
-export async function generateRabbitHoleGraph(_query: string): Promise<GeneratedGraph | null> {
-    return null
+/** One LLM call on cache miss; offline template if no API key. */
+export async function generateRabbitHoleGraph(query: string): Promise<GeneratedGraph> {
+    const fromOpenAi = await openaiGenerateRabbitHoleGraph(query)
+    if (fromOpenAi) return fromOpenAi
+    return offlineGenerateRabbitHoleGraph(query)
 }

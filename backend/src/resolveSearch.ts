@@ -1,7 +1,8 @@
-import { Category, Prisma, RelationType } from '@prisma/client'
+import { Category, RelationType, RabbitHoleStatus } from '@prisma/client'
 import prisma from './db/client'
 import { generateRabbitHoleGraph } from './generateHole'
 import { intentSignature, pickBestHole, tokenSet, vocabularyFromTexts } from './intent'
+import { waitForReadyHole } from './waitForHole'
 
 type NodeRow = {
     id: string
@@ -15,6 +16,14 @@ type EdgeRow = {
     fromNodeId: string
     toNodeId: string
     relationType: string
+}
+
+export type SearchResult = {
+    nodes: NodeRow[]
+    edges: EdgeRow[]
+    path: string[]
+    rabbitHoleId: string
+    matched: 'exact' | 'fuzzy' | 'discovered' | 'generated'
 }
 
 function nodeTexts(node: NodeRow): string[] {
@@ -95,7 +104,7 @@ async function recordQuery(text: string, rabbitHoleId: string) {
     })
 }
 
-async function holeVocabulary(holeId: string, nodes: NodeRow[], priorQueries: { text: string }[]) {
+async function holeVocabulary(nodes: NodeRow[], priorQueries: { text: string }[]) {
     const texts = [
         ...priorQueries.map(query => query.text),
         ...nodes.flatMap(node => nodeTexts(node)),
@@ -103,7 +112,35 @@ async function holeVocabulary(holeId: string, nodes: NodeRow[], priorQueries: { 
     return vocabularyFromTexts(texts)
 }
 
-export async function resolveSearch(query: string) {
+async function resultFromHole(
+    rabbitHoleId: string,
+    focusNodeId: string | null | undefined,
+    matched: SearchResult['matched'],
+): Promise<SearchResult> {
+    const graph = await loadHoleGraph(rabbitHoleId)
+    const focus = graph.nodes.find(node => node.id === focusNodeId) || graph.nodes[0]
+    return {
+        ...graph,
+        path: focus ? buildPath(new Set(graph.nodes.map(node => node.id)), graph.edges, focus.id) : [],
+        rabbitHoleId,
+        matched,
+    }
+}
+
+async function resolveLockedHole(query: string, signature: string): Promise<SearchResult | null> {
+    const byIntent = await prisma.rabbitHole.findUnique({ where: { intentSignature: signature } })
+    if (!byIntent) return null
+    if (byIntent.status === RabbitHoleStatus.READY) {
+        return resultFromHole(byIntent.id, byIntent.focusNodeId, 'generated')
+    }
+    if (byIntent.status === RabbitHoleStatus.GENERATING) {
+        const ready = await waitForReadyHole(byIntent.id)
+        if (ready) return resultFromHole(ready.id, ready.focusNodeId, 'generated')
+    }
+    return null
+}
+
+export async function resolveSearch(query: string): Promise<SearchResult> {
     const signature = intentSignature(query)
 
     const exact = await prisma.searchQuery.findFirst({
@@ -111,19 +148,18 @@ export async function resolveSearch(query: string) {
         orderBy: { createdAt: 'asc' },
         include: { rabbitHole: true },
     })
-    if (exact?.rabbitHole) {
-        const graph = await loadHoleGraph(exact.rabbitHole.id)
-        const focus = graph.nodes.find(node => node.id === exact.rabbitHole!.focusNodeId)
-            || graph.nodes[0]
-        return {
-            ...graph,
-            path: focus ? buildPath(new Set(graph.nodes.map(node => node.id)), graph.edges, focus.id) : [],
-            rabbitHoleId: exact.rabbitHole.id,
-            matched: 'exact' as const,
-        }
+    if (exact?.rabbitHole?.status === RabbitHoleStatus.READY) {
+        return resultFromHole(exact.rabbitHole.id, exact.rabbitHole.focusNodeId, 'exact')
+    }
+
+    const locked = await resolveLockedHole(query, signature)
+    if (locked) {
+        await recordQuery(query, locked.rabbitHoleId)
+        return { ...locked, matched: 'exact' }
     }
 
     const holes = await prisma.rabbitHole.findMany({
+        where: { status: RabbitHoleStatus.READY },
         include: {
             nodes: true,
             searchQueries: { select: { text: true } },
@@ -134,23 +170,16 @@ export async function resolveSearch(query: string) {
         query,
         await Promise.all(holes.map(async hole => ({
             hole,
-            vocabulary: await holeVocabulary(hole.id, hole.nodes, hole.searchQueries),
+            vocabulary: await holeVocabulary(hole.nodes, hole.searchQueries),
         }))),
     )
 
     if (ranked) {
         await recordQuery(query, ranked.hole.id)
-        const graph = await loadHoleGraph(ranked.hole.id)
-        const focus = graph.nodes.find(node => node.id === ranked.hole.focusNodeId) || graph.nodes[0]
-        return {
-            ...graph,
-            path: focus ? buildPath(new Set(graph.nodes.map(node => node.id)), graph.edges, focus.id) : [],
-            rabbitHoleId: ranked.hole.id,
-            matched: 'fuzzy' as const,
-        }
+        return resultFromHole(ranked.hole.id, ranked.hole.focusNodeId, 'fuzzy')
     }
 
-    const allNodes = await prisma.node.findMany()
+    const allNodes = await prisma.node.findMany({ where: { rabbitHoleId: null } })
     const allEdges = await prisma.edge.findMany()
     const queryTokens = tokenSet(query)
 
@@ -175,6 +204,8 @@ export async function resolveSearch(query: string) {
                 title: bestNode.title,
                 focusNodeId: bestNode.id,
                 seedQuery: query,
+                intentSignature: signature,
+                status: RabbitHoleStatus.READY,
                 nodes: { connect: nodes.map(node => ({ id: node.id })) },
             },
         })
@@ -184,32 +215,64 @@ export async function resolveSearch(query: string) {
             edges,
             path: buildPath(component, edges, bestNode.id),
             rabbitHoleId: hole.id,
-            matched: 'discovered' as const,
+            matched: 'discovered',
         }
     }
 
-    const aiGraph = await generateRabbitHoleGraph(query)
-    if (aiGraph) {
-        const generated = await persistGeneratedGraph(query, aiGraph)
-        await recordQuery(query, generated.rabbitHoleId)
-        return generated
-    }
-
-    const generated = await createPlaceholderHole(query)
-    await recordQuery(query, generated.rabbitHoleId)
-    return generated
+    return generateWithLock(query, signature)
 }
 
-async function persistGeneratedGraph(query: string, graph: NonNullable<Awaited<ReturnType<typeof generateRabbitHoleGraph>>>) {
-    const slug = slugify(graph.title)
-    const hole = await prisma.rabbitHole.create({
-        data: { slug, title: graph.title, seedQuery: query },
-    })
+async function generateWithLock(query: string, signature: string): Promise<SearchResult> {
+    const slug = `${slugify(query.slice(0, 48))}-${signature.slice(0, 10)}`
+    let holeId: string
+
+    try {
+        const created = await prisma.rabbitHole.create({
+            data: {
+                slug,
+                title: query.trim().replace(/\?$/, ''),
+                seedQuery: query,
+                intentSignature: signature,
+                status: RabbitHoleStatus.GENERATING,
+            },
+        })
+        holeId = created.id
+    } catch {
+        const raced = await resolveLockedHole(query, signature)
+        if (raced) {
+            await recordQuery(query, raced.rabbitHoleId)
+            return { ...raced, matched: 'exact' }
+        }
+        throw new Error('Could not acquire generation lock')
+    }
+
+    try {
+        const graph = await generateRabbitHoleGraph(query)
+        const result = await persistGeneratedGraph(graph, holeId)
+        await prisma.rabbitHole.update({
+            where: { id: holeId },
+            data: { status: RabbitHoleStatus.READY, title: graph.title },
+        })
+        await recordQuery(query, holeId)
+        return { ...result, matched: 'generated' as const }
+    } catch (error) {
+        await prisma.rabbitHole.update({
+            where: { id: holeId },
+            data: { status: RabbitHoleStatus.FAILED },
+        })
+        throw error
+    }
+}
+
+async function persistGeneratedGraph(
+    graph: Awaited<ReturnType<typeof generateRabbitHoleGraph>>,
+    rabbitHoleId: string,
+) {
     const ids = new Map<string, string>()
     for (const node of graph.nodes) {
         const created = await prisma.node.create({
             data: {
-                slug: node.slug,
+                slug: `${rabbitHoleId.slice(0, 8)}-${node.slug}`,
                 title: node.title,
                 category: Category.GENERAL,
                 aiSummary: node.aiSummary,
@@ -220,7 +283,7 @@ async function persistGeneratedGraph(query: string, graph: NonNullable<Awaited<R
                 difficulty: node.difficulty,
                 timeEstimate: node.timeEstimate,
                 costEstimate: node.costEstimate,
-                rabbitHoleId: hole.id,
+                rabbitHoleId,
             },
         })
         ids.set(node.slug, created.id)
@@ -240,57 +303,12 @@ async function persistGeneratedGraph(query: string, graph: NonNullable<Awaited<R
         edges.push(created)
     }
     const focusNodeId = ids.get(graph.focusSlug) || [...ids.values()][0]
-    await prisma.rabbitHole.update({ where: { id: hole.id }, data: { focusNodeId } })
-    const nodes = await prisma.node.findMany({ where: { rabbitHoleId: hole.id } })
+    await prisma.rabbitHole.update({ where: { id: rabbitHoleId }, data: { focusNodeId } })
+    const nodes = await prisma.node.findMany({ where: { rabbitHoleId } })
     return {
         nodes,
         edges,
         path: focusNodeId ? buildPath(new Set(nodes.map(node => node.id)), edges, focusNodeId) : [],
-        rabbitHoleId: hole.id,
-        matched: 'generated' as const,
-    }
-}
-
-/** Single-node stub until generateRabbitHoleGraph is implemented. */
-async function createPlaceholderHole(query: string) {
-    const title = query.trim().replace(/\?$/, '')
-    const slug = slugify(title)
-    const uniqueSlug = `${slug}-${Date.now().toString(36)}`
-
-    const hole = await prisma.rabbitHole.create({
-        data: {
-            slug: uniqueSlug,
-            title,
-            seedQuery: query,
-        },
-    })
-
-    const node = await prisma.node.create({
-        data: {
-            slug: `${uniqueSlug}-root`,
-            title,
-            category: Category.GENERAL,
-            aiSummary: 'This rabbit hole will be expanded by AI from your search.',
-            steps: [] as Prisma.InputJsonValue,
-            tools: [] as Prisma.InputJsonValue,
-            materials: [] as Prisma.InputJsonValue,
-            commonMistakes: [] as Prisma.InputJsonValue,
-            timeEstimate: '',
-            costEstimate: '',
-            rabbitHoleId: hole.id,
-        },
-    })
-
-    await prisma.rabbitHole.update({
-        where: { id: hole.id },
-        data: { focusNodeId: node.id },
-    })
-
-    return {
-        nodes: [node],
-        edges: [] as EdgeRow[],
-        path: [node.id],
-        rabbitHoleId: hole.id,
-        matched: 'generated' as const,
+        rabbitHoleId,
     }
 }

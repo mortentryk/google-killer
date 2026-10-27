@@ -25,6 +25,12 @@ enum RelationType {
   PREREQUISITE
 }
 
+enum RabbitHoleStatus {
+  GENERATING
+  READY
+  FAILED
+}
+
 model Node {
   id             String   @id @default(uuid())
   title          String
@@ -57,12 +63,14 @@ model Node {
 }
 
 model RabbitHole {
-  id          String   @id @default(uuid())
-  slug        String   @unique
-  title       String
-  seedQuery   String?
-  focusNodeId String?
-  createdAt   DateTime @default(now())
+  id               String           @id @default(uuid())
+  slug             String           @unique
+  title            String
+  seedQuery        String?
+  intentSignature  String?          @unique
+  status           RabbitHoleStatus @default(READY)
+  focusNodeId      String?
+  createdAt        DateTime         @default(now())
 
   nodes         Node[]
   searchQueries SearchQuery[]
