@@ -1,8 +1,14 @@
-export async function openaiJsonChat(system: string, user: string): Promise<unknown | null> {
+import { OpenAiRole, resolveOpenAiModel } from './openaiModels'
+
+export async function openaiJsonChat(
+    system: string,
+    user: string,
+    role: OpenAiRole,
+): Promise<unknown | null> {
     const apiKey = process.env.OPENAI_API_KEY
     if (!apiKey) return null
 
-    const model = process.env.OPENAI_MODEL || 'gpt-4o-mini'
+    const model = resolveOpenAiModel(role)
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {

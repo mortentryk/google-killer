@@ -18,6 +18,7 @@ export async function reviewerAgent(query: string, draft: GeneratedGraph): Promi
     const raw = await openaiJsonChat(
         SYSTEM,
         `Query: ${query}\n\nDraft graph JSON:\n${JSON.stringify(draft)}`,
+        'reviewer',
     )
     if (!raw || typeof raw !== 'object') return null
 

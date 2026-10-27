@@ -19,6 +19,7 @@ export async function writerAgent(query: string, revisionNotes?: string[]): Prom
     const raw = await openaiJsonChat(
         SYSTEM,
         `Query: ${query}${revision}\n\nReturn JSON: { "title", "focusSlug", "nodes": [...], "edges": [...] }`,
+        'writer',
     )
     if (!raw) return null
 

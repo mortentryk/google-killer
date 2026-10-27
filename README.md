@@ -27,7 +27,7 @@ npx prisma migrate deploy
 npm run dev
 ```
 
-Optional: set `OPENAI_API_KEY` in `.env` for real AI graphs on first visit.
+Optional: set `OPENAI_API_KEY` in `.env`. Defaults: `OPENAI_WRITER_MODEL=gpt-4o-mini`, `OPENAI_REVIEWER_MODEL=gpt-4o` (override either in `.env`).
 
 ## Frontend
 
