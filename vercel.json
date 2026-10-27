@@ -1,0 +1,18 @@
+{
+  "version": 2,
+  "buildCommand": "npm run vercel-build",
+  "installCommand": "npm run vercel-install",
+  "outputDirectory": "frontend/build",
+  "framework": "create-react-app",
+  "rewrites": [
+    { "source": "/search", "destination": "/api" },
+    { "source": "/nodes/(.*)", "destination": "/api" },
+    { "source": "/((?!static|api|search|nodes).*)", "destination": "/index.html" }
+  ],
+  "functions": {
+    "api/index.ts": {
+      "memory": 1024,
+      "maxDuration": 60
+    }
+  }
+}

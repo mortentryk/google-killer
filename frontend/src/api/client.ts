@@ -1,6 +1,6 @@
 import { GraphData, Node } from '../types';
 
-const API_URL = 'http://localhost:3001';
+const API_URL = process.env.REACT_APP_API_URL ?? '';
 
 export async function searchNodes(query: string): Promise<GraphData> {
     const res = await fetch(`${API_URL}/search?q=${encodeURIComponent(query)}`);
